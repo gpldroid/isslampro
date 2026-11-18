@@ -35,8 +35,21 @@ jobs:
       - name: Point website metadata to this GitHub Pages site
         shell: bash
         run: |
-          find . -path './.git' -prune -o -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.json' -o -name '*.xml' -o -name '*.svg' -o -name '*.txt' -o -name '*.md' \) -print0 |
-            xargs -0 -r sed -i 's#https://k3bora.github.io/UltraQuran/#https://gpldroid.github.io/isslampro/#g'
+          python3 - <<'PY'
+          from pathlib import Path
+          extensions = {".html", ".js", ".css", ".json", ".xml", ".svg", ".txt", ".md"}
+          old = "https://k3bora.github.io/UltraQuran/"
+          new = "https://gpldroid.github.io/isslampro/"
+          for path in Path(".").rglob("*"):
+              if not path.is_file() or ".git" in path.parts or path.suffix.lower() not in extensions:
+                  continue
+              try:
+                  text = path.read_text(encoding="utf-8")
+              except UnicodeDecodeError:
+                  continue
+              if old in text:
+                  path.write_text(text.replace(old, new), encoding="utf-8")
+          PY
 
       - name: Commit and push imported website files
         run: |
