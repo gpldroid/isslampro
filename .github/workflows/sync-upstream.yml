@@ -35,7 +35,7 @@ jobs:
       - name: Point website metadata to this GitHub Pages site
         shell: bash
         run: |
-          find . -path './.git' -prune -o -type f \\( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.json' -o -name '*.xml' -o -name '*.svg' -o -name '*.txt' -o -name '*.md' \\) -print0 |
+          find . -path './.git' -prune -o -type f \( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.json' -o -name '*.xml' -o -name '*.svg' -o -name '*.txt' -o -name '*.md' \) -print0 |
             xargs -0 -r sed -i 's#https://k3bora.github.io/UltraQuran/#https://gpldroid.github.io/isslampro/#g'
 
       - name: Commit and push imported website files
