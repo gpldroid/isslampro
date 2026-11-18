@@ -1,0 +1,51 @@
+name: Sync UltraQuran website source
+
+on:
+  push:
+    paths:
+      - ".github/workflows/sync-upstream.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync-website:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout destination repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Checkout original UltraQuran repository
+        uses: actions/checkout@v4
+        with:
+          repository: K3bOra/UltraQuran
+          ref: main
+          path: upstream-source
+          fetch-depth: 1
+
+      - name: Copy the complete website (including data, images and fonts)
+        run: |
+          cp -a upstream-source/docs/. .
+          rm -rf upstream-source
+
+      - name: Point website metadata to this GitHub Pages site
+        shell: bash
+        run: |
+          find . -path './.git' -prune -o -type f \\( -name '*.html' -o -name '*.js' -o -name '*.css' -o -name '*.json' -o -name '*.xml' -o -name '*.svg' -o -name '*.txt' -o -name '*.md' \\) -print0 |
+            xargs -0 -r sed -i 's#https://k3bora.github.io/UltraQuran/#https://gpldroid.github.io/isslampro/#g'
+
+      - name: Commit and push imported website files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Import complete UltraQuran website assets"
+            git push origin HEAD:main
+          else
+            echo "Website source is already up to date."
+          fi
