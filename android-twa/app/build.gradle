@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId "com.gpldroid.isslampro"
-        minSdk 24
+        minSdk 24 // Android Browser Helper 2.7.4 requirement
         targetSdk 36
         versionCode 1
         versionName "1.0.0"
