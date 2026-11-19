@@ -26,7 +26,7 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Install Android API 36 SDK platform
+      - name: Install Android SDK API 36 and accept licenses
         shell: bash
         run: |
           set -euo pipefail
