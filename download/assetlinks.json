@@ -1,0 +1,10 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.gpldroid.isslampro",
+      "sha256_cert_fingerprints": ["B4:B5:CA:61:E0:65:E6:2D:57:35:A2:A9:66:5E:9A:80:BF:95:BA:A5:5F:41:E9:01:38:0F:97:E7:2F:01:95:77"]
+    }
+  }
+]
