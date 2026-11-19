@@ -2840,7 +2840,7 @@ document.addEventListener("keydown", (e) => {
 
 /* ---------------- VISITORS ---------------- */
 const COUNTER = "https://abacus.jasoncameron.dev";
-const COUNTER_NS = "ultraquran-k3bora";
+const COUNTER_NS = "isslampro";
 async function visitors() {
   let firstDevice = false, newSession = false;
   try { firstDevice = !localStorage.getItem("uq.visited"); } catch {}
