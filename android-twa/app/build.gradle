@@ -2,6 +2,7 @@ plugins {
     id "com.android.application"
 }
 
+// Signing keystore is provided securely by GitHub Actions.
 def signingStore = System.getenv("ANDROID_KEYSTORE_FILE")
 
 android {
