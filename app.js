@@ -2875,7 +2875,7 @@ const visitsHTML = () => `<span class="visits" ${window.__visitors ? "" : "hidde
   route();
   visitors();
   if ("serviceWorker" in navigator && location.protocol === "https:") {
-    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then((r) => r.update()).catch(() => {});
+    navigator.serviceWorker.register(new URL("./sw.js", document.baseURI), { scope: new URL("./", document.baseURI).pathname, updateViaCache: "none" }).then((r) => r.update()).catch(() => {});
     // a new version took over: reload once so the page shows it
     let reloaded = false;
     const hadController = !!navigator.serviceWorker.controller;
