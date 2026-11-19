@@ -60,6 +60,7 @@ jobs:
           }
           root = Path("android-twa/app/src/main/res")
           for density, size in densities.items():
+              (root / f"mipmap-{density}").mkdir(parents=True, exist_ok=True)
               scale = size / 108
               canvas = Image.new("RGBA", (size * 4, size * 4), (8, 36, 35, 255))
               draw = ImageDraw.Draw(canvas)
