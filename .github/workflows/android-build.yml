@@ -42,6 +42,43 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0"
 
+      - name: Generate density-specific APK launcher icons
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user pillow
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw
+          from pathlib import Path
+
+          densities = {
+              "mdpi": 48,
+              "hdpi": 72,
+              "xhdpi": 96,
+              "xxhdpi": 144,
+              "xxxhdpi": 192,
+          }
+          root = Path("android-twa/app/src/main/res")
+          for density, size in densities.items():
+              scale = size / 108
+              canvas = Image.new("RGBA", (size * 4, size * 4), (8, 36, 35, 255))
+              draw = ImageDraw.Draw(canvas)
+              p = lambda value: round(value * scale * 4)
+              gold = (201, 168, 106, 255)
+              draw.line([(p(54),p(8)),(p(100),p(54)),(p(54),p(100)),(p(8),p(54)),(p(54),p(8))],
+                        fill=gold, width=max(2,round(3*scale*4)), joint="curve")
+              draw.rectangle((p(28),p(28),p(80),p(80)), outline=gold, width=max(2,round(2*scale*4)))
+              book = [(54,39),(44,32),(32,31),(25,33),(25,72),(36,70),(46,72),
+                      (54,80),(62,72),(72,70),(83,72),(83,33),(76,31),(64,32),(54,39)]
+              draw.line([(p(x),p(y)) for x,y in book], fill=(201,168,106,180),
+                        width=max(2,round(2*scale*4)), joint="curve")
+              draw.line([(p(54),p(39)),(p(54),p(80))], fill=gold,
+                        width=max(2,round(3*scale*4)))
+              canvas.resize((size,size), Image.Resampling.LANCZOS).save(
+                  root / f"mipmap-{density}" / "ic_launcher.png"
+              )
+          PY
+
       - name: Set up Gradle 8.13
         uses: gradle/actions/setup-gradle@v4
         with:
