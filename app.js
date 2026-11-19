@@ -250,7 +250,7 @@ function setMedia(t) {
   if (!("mediaSession" in navigator)) return;
   const art = t.img ? [{ src: new URL(t.img, location.href).href, sizes: "220x240", type: "image/webp" }]
     : [{ src: new URL("icons/icon-512.png", location.href).href, sizes: "512x512", type: "image/png" }];
-  navigator.mediaSession.metadata = new MediaMetadata({ title: t.t, artist: t.s || "", album: t.d || "ألترا قرآن", artwork: art });
+  navigator.mediaSession.metadata = new MediaMetadata({ title: t.t, artist: t.s || "", album: t.d || "إسلام برو", artwork: art });
   const ms = navigator.mediaSession;
   const h = { play: () => A.play(), pause: () => A.pause(), previoustrack: prev, nexttrack: () => next(), seekbackward: () => seekBy(-15), seekforward: () => seekBy(15) };
   for (const k in h) { try { ms.setActionHandler(k, h[k]); } catch {} }
@@ -515,14 +515,14 @@ const TILES = [
 function setTop(title, opts = {}) {
   const top = $("#top");
   if (opts.home) {
-    top.innerHTML = `<span class="brand"><svg aria-hidden="true"><use href="#i-logo"/></svg><h1 data-t="ألترا قرآن">ألترا قرآن</h1></span>
+    top.innerHTML = `<span class="brand"><svg aria-hidden="true"><use href="#i-logo"/></svg><h1 data-t="إسلام برو">إسلام برو</h1></span>
 
       <button class="btn-icon" data-go="#/search" aria-label="بحث">${ic("search")}</button>`;
   } else {
     top.innerHTML = `<button class="btn-icon" data-act="back" aria-label="رجوع">${ic("back")}</button><h1>${esc(title)}</h1>
       <button class="btn-icon" data-go="#/search" aria-label="بحث">${ic("search")}</button>`;
   }
-  document.title = opts.home ? "ألترا قرآن" : `${title} · ألترا قرآن`;
+  document.title = opts.home ? "إسلام برو" : `${title} · إسلام برو`;
 }
 function setTab(root) {
   const h = location.hash || "#/";
@@ -2372,7 +2372,7 @@ function buildICS() {
   const pad = (x) => String(x).padStart(2, "0");
   const z = (d) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
   const now = z(new Date());
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//UltraQuran//Prayer//AR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:مواقيت الصلاة · ألترا قرآن"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//UltraQuran//Prayer//AR", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:مواقيت الصلاة · إسلام برو"];
   for (let day = 0; day < 30; day++) {
     const t = dayTimes(day);
     for (const [k, name] of PRAYERS) {
@@ -2398,15 +2398,15 @@ let installEvt = null;
 const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); installEvt = e; $$(".install-card").forEach((x) => x.hidden = false); });
-window.addEventListener("appinstalled", () => { installEvt = null; toast("اتثبت ✓ هتلاقي ألترا قرآن على الشاشة الرئيسية"); $$(".install-card").forEach((x) => x.remove()); });
+window.addEventListener("appinstalled", () => { installEvt = null; toast("اتثبت ✓ هتلاقي إسلام برو على الشاشة الرئيسية"); $$(".install-card").forEach((x) => x.remove()); });
 function installCard(force) {
   if (NATIVE) return "";
   if (IS_ANDROID) return `<div class="install-card"><span class="install-ic"><img src="icons/icon-192.png?v=2" alt=""></span>
-    <span class="grow"><b>تطبيق ألترا قرآن لأندرويد</b><small>كل محتوى الموقع، والأذان بصوت الشيخ في ميعاده حتى والتطبيق مقفول</small></span>
+    <span class="grow"><b>تطبيق إسلام برو لأندرويد</b><small>كل محتوى الموقع، والأذان بصوت الشيخ في ميعاده حتى والتطبيق مقفول</small></span>
     <span class="install-btns"><a class="btn" style="height:38px;padding:0 16px" href="${APK_URL}" download>تحميل</a></span></div>`;
   if (isStandalone() || (!force && S.installHidden)) return "";
   return `<div class="install-card"><span class="install-ic"><img src="icons/icon-192.png?v=2" alt=""></span>
-    <span class="grow"><b>ثبّت ألترا قرآن كتطبيق</b><small>أيقونة على الشاشة الرئيسية، يفتح ملء الشاشة، والأذان والإشعارات يشتغلوا أحسن</small></span>
+    <span class="grow"><b>ثبّت إسلام برو كتطبيق</b><small>أيقونة على الشاشة الرئيسية، يفتح ملء الشاشة، والأذان والإشعارات يشتغلوا أحسن</small></span>
     <span class="install-btns"><button class="btn" style="height:38px;padding:0 16px" data-act="install">تثبيت</button>
     ${force ? "" : `<button class="xbtn" data-act="installHide" aria-label="إخفاء">${icSm("x", 16)}</button>`}</span></div>`;
 }
@@ -2693,8 +2693,8 @@ document.addEventListener("click", async (e) => {
     case "sleepSet": setSleep(+el.dataset.m); break;
     case "share": {
       const url = location.href.split("#")[0];
-      const text = t ? `${t.t} — ${t.s || ""}\nاستمع على ألترا قرآن: ${url}` : url;
-      if (navigator.share) navigator.share({ title: "ألترا قرآن", text }).catch(() => {});
+      const text = t ? `${t.t} — ${t.s || ""}\nاستمع على إسلام برو: ${url}` : url;
+      if (navigator.share) navigator.share({ title: "إسلام برو", text }).catch(() => {});
       else { try { await navigator.clipboard.writeText(text); toast("اتنسخ الرابط"); } catch {} }
       break;
     }
