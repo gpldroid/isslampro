@@ -4,6 +4,7 @@ This directory wraps the existing Islam Pro PWA in a Trusted Web Activity. The w
 
 - Application ID: `com.gpldroid.isslampro`
 - Website: `https://gpldroid.github.io/isslampro/`
+- Android target API: 36 (required for new Google Play submissions from August 31, 2026)
 - Outputs: `download/app-release.apk` and `download/app-release.aab`
 
 ## Required GitHub Actions secrets
@@ -29,4 +30,4 @@ Until the origin-root Digital Asset Links file is published, Android may open th
 
 ## Build
 
-The workflow uses Java 17, Gradle 8.9, Android Gradle Plugin 8.7.3, and Android Browser Helper 2.7.4. Run it from GitHub Actions after adding the four secrets.
+The workflow uses Java 17, Gradle 8.13, Android Gradle Plugin 8.13.2, and Android Browser Helper 2.7.4. Run it from GitHub Actions after adding the four secrets.
