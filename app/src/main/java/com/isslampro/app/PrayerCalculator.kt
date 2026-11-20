@@ -29,16 +29,16 @@ object PrayerCalculator {
         "isna" to Method("أمريكا الشمالية - ISNA", 15.0, 15.0)
     )
 
-    private fun sin(d: Double) = sin(Math.toRadians(d))
-    private fun cos(d: Double) = cos(Math.toRadians(d))
-    private fun tan(d: Double) = tan(Math.toRadians(d))
-    private fun asin(x: Double) = Math.toDegrees(asin(x))
-    private fun acos(x: Double) = Math.toDegrees(acos(x))
-    private fun atan2(y: Double, x: Double) = Math.toDegrees(atan2(y, x))
+    private fun sin(d: Double) = kotlin.math.sin(Math.toRadians(d))
+    private fun cos(d: Double) = kotlin.math.cos(Math.toRadians(d))
+    private fun tan(d: Double) = kotlin.math.tan(Math.toRadians(d))
+    private fun asin(x: Double) = Math.toDegrees(kotlin.math.asin(x))
+    private fun acos(x: Double) = Math.toDegrees(kotlin.math.acos(x))
+    private fun atan2(y: Double, x: Double) = Math.toDegrees(kotlin.math.atan2(y, x))
     private fun fix(a: Double, b: Double): Double = ((a % b) + b) % b
     private fun fixHour(a: Double) = fix(a, 24.0)
     private fun fixAngle(a: Double) = fix(a, 360.0)
-    private fun acot(x: Double) = Math.toDegrees(atan(1.0 / x))
+    private fun acot(x: Double) = Math.toDegrees(kotlin.math.atan(1.0 / x))
 
     private fun julian(year: Int, month: Int, day: Int): Double {
         var y = year; var m = month
