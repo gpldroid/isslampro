@@ -202,16 +202,16 @@ fun IslamProApp(player: ExoPlayer) {
                                         loading = true
                                         scope.launch {
                                             val result = runCatching {
-                                                val response = JSONObject(loadCachedUrl(context, "tafsir_${selectedChapter!!.number}", "https://api.alquran.cloud/v1/surah/${selectedChapter!!.number}/ar.muyassar"))
-                                                val a = response.getJSONObject("data").getJSONArray("ayahs")
-                                                (0 until a.length()).map { a.getJSONObject(it).getString("text") }
+                                                withContext(Dispatchers.IO) {
+                                                    val response = JSONObject(loadCachedUrl(context, "tafsir_${selectedChapter!!.number}", "https://api.alquran.cloud/v1/surah/${selectedChapter!!.number}/ar.muyassar"))
+                                                    val a = response.getJSONObject("data").getJSONArray("ayahs")
+                                                    (0 until a.length()).map { a.getJSONObject(it).getString("text") }
+                                                }
                                             }.getOrNull()
-                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                                tafsir = result ?: emptyList()
-                                                showTafsir = tafsir.isNotEmpty()
-                                                loading = false
-                                                if (result == null) error = "تعذر تحميل التفسير حالياً."
-                                            }
+                                            tafsir = result ?: emptyList()
+                                            showTafsir = tafsir.isNotEmpty()
+                                            loading = false
+                                            if (result == null) error = "تعذر تحميل التفسير حالياً."
                                         }
                                     }
                                 }) { Text(if (showTafsir) "إخفاء التفسير" else "التفسير الميسر") }
@@ -256,7 +256,13 @@ fun IslamProApp(player: ExoPlayer) {
                                         recitations = (0 until arr.length()).map { i ->
                                             val item = arr.getJSONObject(i)
                                             val ch = item.getJSONArray("ch")
-                                            Recitation(item.getString("name"), item.getString("src"), (0 until ch.length()).map { ch.getInt(it) })
+                                            val urls = mutableMapOf<Int, String>()
+                                            if (item.has("urls")) {
+                                                val objUrls = item.getJSONObject("urls")
+                                                val keys = objUrls.keys()
+                                                while (keys.hasNext()) { val key = keys.next(); key.toIntOrNull()?.let { urls[it] = objUrls.getString(key) } }
+                                            }
+                                            Recitation(item.getString("name"), item.optString("src").takeIf { it.isNotBlank() }, (0 until ch.length()).map { ch.getInt(it) }, urls)
                                         }
                                     } catch (_: Exception) { error = "تعذر تحميل روايات القارئ." }
                                     loading = false
@@ -271,10 +277,13 @@ fun IslamProApp(player: ExoPlayer) {
                                             val chapter = chapters.firstOrNull { it.number == number }
                                             if (chapter != null) {
                                                 Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable {
-                                                    val url = when {
-                                                        recitation.source.contains("%03d") -> recitation.source.replace("%03d", number.toString().padStart(3, '0'))
-                                                        recitation.source.contains("%d") -> recitation.source.replace("%d", number.toString())
-                                                        else -> recitation.source.trimEnd('/') + "/" + number.toString().padStart(3, '0') + ".mp3"
+                                                    val url = recitation.urls[number] ?: run {
+                                                        val source = recitation.source ?: return@clickable
+                                                        when {
+                                                            source.contains("%03d") -> source.replace("%03d", number.toString().padStart(3, '0'))
+                                                            source.contains("%d") -> source.replace("%d", number.toString())
+                                                            else -> source.trimEnd('/') + "/" + number.toString().padStart(3, '0') + ".mp3"
+                                                        }
                                                     }
                                                     player.setMediaItem(MediaItem.fromUri(url)); player.prepare(); player.play()
                                                     selectedRadio = Radio("${selectedReciter!!.name} — ${chapter.name}", url)
