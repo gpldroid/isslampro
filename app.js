@@ -14,7 +14,7 @@ const NATIVE = window.UltraQuranNative || null;
 const IS_ANDROID = /android/i.test(navigator.userAgent);
 const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const IS_PHONE = IS_ANDROID || IS_IOS || matchMedia("(pointer: coarse)").matches;
-const APK_URL = "app/UltraQuran.apk";
+const APK_URL = "https://drive.google.com/file/d/1GJMBdM-AGbaQ61HCLfxZ23Pp3m6zo7SY/view?usp=sharing";
 if (NATIVE) document.documentElement.classList.add("in-app");
 let nativeSig = "";
 function nativePlayback(t, playing) {
@@ -650,7 +650,7 @@ if (!NATIVE && IS_ANDROID && navigator.getInstalledRelatedApps) {
 function appPromo() {
   if (NATIVE || S.promoOff || S.appInstalled || !IS_PHONE) return "";
   return `<div class="promo-pill">
-    <a class="pp-main" href="${APK_URL}" download="UltraQuran.apk" type="application/vnd.android.package-archive" data-act="promoGot">
+    <a class="pp-main" href="${APK_URL}" target="_blank" rel="noopener noreferrer" data-act="promoGot">
       <span class="pp-ic"><img src="icons/icon-192.png?v=2" alt=""></span>
       <span class="pp-t">تطبيق أندرويد<small>الأذان حتى والتطبيق مقفول · مجاناً</small></span>
       <span class="pp-dl">${icSm("dl", 17)}</span>
