@@ -183,18 +183,57 @@ fun IslamProApp(player: ExoPlayer) {
                         }
                     }
                     "الصلاة" -> {
+                        var city by remember { mutableStateOf("الدار البيضاء") }
+                        var latText by remember { mutableStateOf("33.5731") }
+                        var lngText by remember { mutableStateOf("-7.5898") }
+                        var methodKey by remember { mutableStateOf("morocco") }
+                        var methodMenu by remember { mutableStateOf(false) }
+                        val latitude = latText.toDoubleOrNull()
+                        val longitude = lngText.toDoubleOrNull()
+                        val prayerTimes = remember(latitude, longitude, methodKey) {
+                            if (latitude != null && longitude != null && latitude in -90.0..90.0 && longitude in -180.0..180.0)
+                                runCatching { PrayerCalculator.calculate(java.time.LocalDate.now(), latitude, longitude, methodKey) }.getOrNull()
+                            else null
+                        }
+                        val zone = java.time.ZoneId.systemDefault()
                         Column(Modifier.fillMaxSize().padding(padding)) {
-                            Header("مواقيت الصلاة", "اختر المدينة وطريقة الحساب لضبط المواقيت")
-                            Surface(color = Color.White, shape = RoundedCornerShape(20.dp), modifier = Modifier.padding(16.dp)) {
-                                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("المغرب — مواقيت الصلاة", color = Green, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                                    listOf("الفجر","الشروق","الظهر","العصر","المغرب","العشاء").forEachIndexed { index, name ->
-                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                            Text(name, color = Ink)
-                                            Text(if (index == 0) "— : —" else "تُحدد بعد اختيار المدينة", color = Color.Gray, fontSize = 12.sp)
+                            Header("مواقيت الصلاة", "حساب فلكي محلي مع طريقة حساب قابلة للتغيير")
+                            Surface(color = Color.White, shape = RoundedCornerShape(20.dp), modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("المدينة والإحداثيات", color = Green, fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                                    OutlinedTextField(value = city, onValueChange = { city = it }, label = { Text("اسم المدينة") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        OutlinedTextField(value = latText, onValueChange = { latText = it }, label = { Text("خط العرض") }, singleLine = true, modifier = Modifier.weight(1f))
+                                        OutlinedTextField(value = lngText, onValueChange = { lngText = it }, label = { Text("خط الطول") }, singleLine = true, modifier = Modifier.weight(1f))
+                                    }
+                                    Box {
+                                        OutlinedButton(onClick = { methodMenu = true }, modifier = Modifier.fillMaxWidth()) {
+                                            Text(PrayerCalculator.methods[methodKey]?.title ?: "طريقة الحساب")
+                                        }
+                                        DropdownMenu(expanded = methodMenu, onDismissRequest = { methodMenu = false }) {
+                                            PrayerCalculator.methods.forEach { (key, method) ->
+                                                DropdownMenuItem(text = { Text(method.title) }, onClick = { methodKey = key; methodMenu = false })
+                                            }
                                         }
                                     }
-                                    Text("لم نعرض أوقاتاً تقديرية حتى لا نعطي مواقيت غير دقيقة. سنضيف اختيار المدينة والحساب الفلكي في المرحلة التالية.", color = Color.Gray, fontSize = 12.sp, lineHeight = 20.sp)
+                                    Text("مواقيت " + city + " — " + java.time.LocalDate.now(), color = Ink, fontWeight = FontWeight.SemiBold)
+                                    if (prayerTimes == null) {
+                                        Text("أدخل إحداثيات صحيحة لعرض المواقيت.", color = Color(0xFFB3261E))
+                                    } else {
+                                        val rows = listOf(
+                                            "الفجر" to prayerTimes.fajr, "الشروق" to prayerTimes.sunrise,
+                                            "الظهر" to prayerTimes.dhuhr, "العصر" to prayerTimes.asr,
+                                            "المغرب" to prayerTimes.maghrib, "العشاء" to prayerTimes.isha
+                                        )
+                                        rows.forEach { (name, instant) ->
+                                            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(name, color = Ink)
+                                                Text(PrayerCalculator.format(instant, zone), color = Green, fontWeight = FontWeight.Bold)
+                                            }
+                                            Divider(color = Cream)
+                                        }
+                                    }
+                                    Text("الافتراضي هو إحداثيات الدار البيضاء وطريقة المغرب. عدّل المدينة والإحداثيات حسب موقعك؛ الأوقات محسوبة محلياً وفق الخوارزمية الموجودة في الموقع الأصلي.", color = Color.Gray, fontSize = 11.sp, lineHeight = 18.sp)
                                 }
                             }
                         }
