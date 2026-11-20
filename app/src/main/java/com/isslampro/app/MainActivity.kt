@@ -60,6 +60,8 @@ private suspend fun fetchText(path: String): String = withContext(Dispatchers.IO
 }
 
 private data class Radio(val name: String, val url: String)
+private data class Reciter(val id: Int, val name: String)
+private data class Recitation(val name: String, val source: String, val chapters: List<Int>)
 private data class Chapter(val number: Int, val name: String)
 
 @Composable
@@ -67,6 +69,9 @@ fun IslamProApp(player: ExoPlayer) {
     var page by remember { mutableStateOf("الرئيسية") }
     var chapters by remember { mutableStateOf<List<Chapter>>(emptyList()) }
     var radios by remember { mutableStateOf<List<Radio>>(emptyList()) }
+    var reciters by remember { mutableStateOf<List<Reciter>>(emptyList()) }
+    var recitations by remember { mutableStateOf<List<Recitation>>(emptyList()) }
+    var selectedReciter by remember { mutableStateOf<Reciter?>(null) }
     var selectedRadio by remember { mutableStateOf<Radio?>(null) }
     var playing by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
@@ -85,6 +90,10 @@ fun IslamProApp(player: ExoPlayer) {
         try {
             val arr = JSONArray(fetchText("radios.json"))
             radios = (0 until arr.length()).map { val a = arr.getJSONArray(it); Radio(a.getString(0), a.getString(1)) }
+        } catch (_: Exception) { }
+        try {
+            val arr = JSONArray(fetchText("reciters.json"))
+            reciters = (0 until arr.length()).map { val a = arr.getJSONArray(it); Reciter(a.getInt(0), a.getString(1)) }
         } catch (_: Exception) { }
     }
 
@@ -161,6 +170,71 @@ fun IslamProApp(player: ExoPlayer) {
                                     item { Text("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp), textAlign = TextAlign.Center, color = Green, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
                                     items(ayat.chunked(1).flatten()) { verse ->
                                         Text(verse + " ۞", modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp), textAlign = TextAlign.Center, color = Ink, fontSize = 24.sp, lineHeight = 48.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    "القراء والتلاوات" -> {
+                        Column(Modifier.fillMaxSize().padding(padding)) {
+                            Header(if (selectedReciter == null) "القراء والتلاوات" else selectedReciter!!.name, "اختر القارئ والرواية ثم السورة")
+                            if (selectedReciter == null) {
+                                SearchField(search, { search = it }, "ابحث عن قارئ")
+                                LazyColumn(contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(reciters.filter { it.name.contains(search, true) }) { reciter ->
+                                        Surface(color = Color.White, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().clickable { selectedReciter = reciter; loading = true; error = null }) {
+                                            Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.RecordVoiceOver, null, tint = Green)
+                                                Spacer(Modifier.width(12.dp))
+                                                Text(reciter.name, color = Ink, modifier = Modifier.weight(1f))
+                                                Icon(Icons.Default.ChevronLeft, null, tint = Gold)
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                LaunchedEffect(selectedReciter) {
+                                    val r = selectedReciter ?: return@LaunchedEffect
+                                    loading = true
+                                    try {
+                                        val obj = JSONObject(fetchText("r/${r.id}.json"))
+                                        val arr = obj.getJSONArray("recs")
+                                        recitations = (0 until arr.length()).map { i ->
+                                            val item = arr.getJSONObject(i)
+                                            val ch = item.getJSONArray("ch")
+                                            Recitation(item.getString("name"), item.getString("src"), (0 until ch.length()).map { ch.getInt(it) })
+                                        }
+                                    } catch (_: Exception) { error = "تعذر تحميل روايات القارئ." }
+                                    loading = false
+                                }
+                                TextButton(onClick = { selectedReciter = null; recitations = emptyList() }) { Text("رجوع إلى القراء") }
+                                if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold)
+                                if (error != null) Text(error!!, color = Color.Red, modifier = Modifier.padding(12.dp))
+                                LazyColumn(contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    items(recitations) { recitation ->
+                                        Text(recitation.name, color = Green, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                                        recitation.chapters.forEach { number ->
+                                            val chapter = chapters.firstOrNull { it.number == number }
+                                            if (chapter != null) {
+                                                Surface(color = Color.White, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clickable {
+                                                    val url = when {
+                                                        recitation.source.contains("%03d") -> recitation.source.replace("%03d", number.toString().padStart(3, '0'))
+                                                        recitation.source.contains("%d") -> recitation.source.replace("%d", number.toString())
+                                                        else -> recitation.source.trimEnd('/') + "/" + number.toString().padStart(3, '0') + ".mp3"
+                                                    }
+                                                    player.setMediaItem(MediaItem.fromUri(url)); player.prepare(); player.play()
+                                                    selectedRadio = Radio("${selectedReciter!!.name} — ${chapter.name}", url)
+                                                    playing = true
+                                                }) {
+                                                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(Icons.Default.PlayCircle, null, tint = Gold)
+                                                        Spacer(Modifier.width(10.dp))
+                                                        Text(chapter.name, color = Ink, modifier = Modifier.weight(1f))
+                                                        Text("استماع", color = Green, fontSize = 12.sp)
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
