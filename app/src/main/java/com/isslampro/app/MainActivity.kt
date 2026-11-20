@@ -402,10 +402,25 @@ fun IslamProApp(player: ExoPlayer) {
                     "المزيد" -> {
                         Column(Modifier.fillMaxSize().padding(padding)) {
                             Header("المزيد من إسلام برو", "أقسام الموقع الأصلي")
-                            listOf("إذاعات القرآن","القراء والتلاوات","التفسير","المكتبة الإسلامية","الابتهالات","الإعدادات").forEach { name ->
+                            listOf("إذاعات القرآن","القراء والتلاوات","التفسير","المكتبة الإسلامية","الابتهالات").forEach { name ->
                                 Surface(color = Color.White, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp).clickable { page = when (name) { "إذاعات القرآن" -> "الإذاعات"; "القراء والتلاوات" -> "القراء والتلاوات"; else -> name } }) {
                                     Text(name, modifier = Modifier.padding(18.dp), color = Ink, fontWeight = FontWeight.SemiBold)
                                 }
+                            }
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text("تذكير الأذكار اليومي", color = Ink, fontWeight = FontWeight.SemiBold)
+                                    Text("إشعار يومي في الساعة 9 صباحاً", color = Color.Gray, fontSize = 11.sp)
+                                }
+                                Switch(checked = reminderEnabled, onCheckedChange = { enabled ->
+                                    reminderEnabled = enabled
+                                    context.getSharedPreferences("islampro_local", Context.MODE_PRIVATE).edit().putBoolean("daily_reminder", enabled).apply()
+                                    ReminderScheduler.set(context, enabled)
+                                    if (enabled && android.os.Build.VERSION.SDK_INT >= 33 &&
+                                        androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                                        (context as? android.app.Activity)?.let { androidx.core.app.ActivityCompat.requestPermissions(it, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 501) }
+                                    }
+                                })
                             }
                         }
                     }
