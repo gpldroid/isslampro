@@ -1,6 +1,8 @@
 package com.isslampro.app
 
 import android.os.Bundle
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -60,13 +62,35 @@ private suspend fun fetchText(path: String): String = withContext(Dispatchers.IO
     }.getInputStream().bufferedReader(Charsets.UTF_8).use { it.readText() }
 }
 
+private suspend fun loadCached(context: Context, key: String, path: String): String = withContext(Dispatchers.IO) {
+    try {
+        val fresh = fetchText(path)
+        context.getSharedPreferences("islampro_local", Context.MODE_PRIVATE).edit().putString("cache_$key", fresh).apply()
+        fresh
+    } catch (e: Exception) {
+        context.getSharedPreferences("islampro_local", Context.MODE_PRIVATE).getString("cache_$key", null) ?: throw e
+    }
+}
+
+private suspend fun loadCachedUrl(context: Context, key: String, url: String): String = withContext(Dispatchers.IO) {
+    try {
+        val fresh = URL(url).openConnection().apply { connectTimeout = 12000; readTimeout = 16000 }.getInputStream().bufferedReader(Charsets.UTF_8).use { it.readText() }
+        context.getSharedPreferences("islampro_local", Context.MODE_PRIVATE).edit().putString("cache_$key", fresh).apply()
+        fresh
+    } catch (e: Exception) {
+        context.getSharedPreferences("islampro_local", Context.MODE_PRIVATE).getString("cache_$key", null) ?: throw e
+    }
+}
 private data class Radio(val name: String, val url: String)
 private data class Reciter(val id: Int, val name: String)
-private data class Recitation(val name: String, val source: String, val chapters: List<Int>)
+private data class Recitation(val name: String, val source: String?, val chapters: List<Int>, val urls: Map<Int, String>)
 private data class Chapter(val number: Int, val name: String)
 
 @Composable
 fun IslamProApp(player: ExoPlayer) {
+    val context = LocalContext.current
+    val localPrefs = remember { context.getSharedPreferences("islampro_local", Context.MODE_PRIVATE) }
+    val scope = rememberCoroutineScope()
     var page by remember { mutableStateOf("الرئيسية") }
     var chapters by remember { mutableStateOf<List<Chapter>>(emptyList()) }
     var radios by remember { mutableStateOf<List<Radio>>(emptyList()) }
@@ -82,20 +106,21 @@ fun IslamProApp(player: ExoPlayer) {
     var showTafsir by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var athkarCount by remember { mutableIntStateOf(0) }
+    var athkarCount by remember { mutableIntStateOf(localPrefs.getInt("athkar_count", 0)) }
+    var reminderEnabled by remember { mutableStateOf(localPrefs.getBoolean("daily_reminder", false)) }
 
     LaunchedEffect(Unit) {
         try {
-            val meta = JSONObject(fetchText("meta.json"))
+            val meta = JSONObject(loadCached(context, "meta", "meta.json"))
             val names = meta.getJSONArray("chapters")
             chapters = (0 until names.length()).map { Chapter(it + 1, names.getString(it)) }
         } catch (_: Exception) { error = "تعذر تحميل فهرس السور. تحقق من اتصال الإنترنت." }
         try {
-            val arr = JSONArray(fetchText("radios.json"))
+            val arr = JSONArray(loadCached(context, "radios", "radios.json"))
             radios = (0 until arr.length()).map { val a = arr.getJSONArray(it); Radio(a.getString(0), a.getString(1)) }
         } catch (_: Exception) { }
         try {
-            val arr = JSONArray(fetchText("reciters.json"))
+            val arr = JSONArray(loadCached(context, "reciters", "reciters.json"))
             reciters = (0 until arr.length()).map { val a = arr.getJSONArray(it); Reciter(a.getInt(0), a.getString(1)) }
         } catch (_: Exception) { }
     }
@@ -152,7 +177,7 @@ fun IslamProApp(player: ExoPlayer) {
                                 loading = true
                                 try {
                                     val json = withContext(Dispatchers.IO) {
-                                        JSONObject(URL("https://api.alquran.cloud/v1/surah/${ch.number}").readText())
+                                        JSONObject(loadCachedUrl(context, "surah_${ch.number}", "https://api.alquran.cloud/v1/surah/${ch.number}"))
                                     }
                                     val list = json.getJSONObject("data").getJSONArray("ayahs")
                                     ayat = (0 until list.length()).map { list.getJSONObject(it).getString("text") }
@@ -175,9 +200,9 @@ fun IslamProApp(player: ExoPlayer) {
                                     if (tafsir.isNotEmpty()) showTafsir = !showTafsir
                                     else {
                                         loading = true
-                                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                        scope.launch {
                                             val result = runCatching {
-                                                val response = JSONObject(URL("https://api.alquran.cloud/v1/surah/${selectedChapter!!.number}/ar.muyassar").readText())
+                                                val response = JSONObject(loadCachedUrl(context, "tafsir_${selectedChapter!!.number}", "https://api.alquran.cloud/v1/surah/${selectedChapter!!.number}/ar.muyassar"))
                                                 val a = response.getJSONObject("data").getJSONArray("ayahs")
                                                 (0 until a.length()).map { a.getJSONObject(it).getString("text") }
                                             }.getOrNull()
@@ -226,7 +251,7 @@ fun IslamProApp(player: ExoPlayer) {
                                     val r = selectedReciter ?: return@LaunchedEffect
                                     loading = true
                                     try {
-                                        val obj = JSONObject(fetchText("r/${r.id}.json"))
+                                        val obj = JSONObject(loadCached(context, "reciter_${r.id}", "r/${r.id}.json"))
                                         val arr = obj.getJSONArray("recs")
                                         recitations = (0 until arr.length()).map { i ->
                                             val item = arr.getJSONObject(i)
@@ -278,7 +303,8 @@ fun IslamProApp(player: ExoPlayer) {
                                         Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                             Text(dhikr, color = Ink, fontSize = 21.sp, textAlign = TextAlign.Center, lineHeight = 36.sp)
                                             Spacer(Modifier.height(12.dp))
-                                            Button(onClick = { athkarCount++ }, colors = ButtonDefaults.buttonColors(containerColor = Green)) { Text("تسبيح  •  $athkarCount") }
+                                            Button(onClick = { athkarCount++; localPrefs.edit().putInt("athkar_count", athkarCount).apply() }, colors = ButtonDefaults.buttonColors(containerColor = Green)) { Text("تسبيح  •  $athkarCount") }
+                                            TextButton(onClick = { athkarCount = 0; localPrefs.edit().putInt("athkar_count", 0).apply() }) { Text("تصفير العداد") }
                                         }
                                     }
                                 }
