@@ -47,10 +47,16 @@ class MainActivity : ComponentActivity() {
         window.statusBarColor = android.graphics.Color.rgb(8, 36, 35)
         window.navigationBarColor = android.graphics.Color.rgb(8, 36, 35)
         setContent {
-            val player = remember { ExoPlayer.Builder(this).build() }
-            DisposableEffect(Unit) { onDispose { player.release() } }
+            val player = remember { AudioEngine.get(applicationContext) }
             IslamProApp(player)
         }
+    }
+}
+
+private object AudioEngine {
+    @Volatile private var instance: ExoPlayer? = null
+    fun get(context: Context): ExoPlayer = instance ?: synchronized(this) {
+        instance ?: ExoPlayer.Builder(context.applicationContext).build().also { instance = it }
     }
 }
 
