@@ -2286,7 +2286,7 @@ async function prayer(parts) {
       <button class="switch" data-act="notify" aria-pressed="${!!c.notify && typeof Notification !== "undefined" && Notification.permission === "granted"}" aria-label="إشعار وقت الصلاة"><i></i></button></div>
     <div class="setting"><span class="grow"><b>تنبيه أكيد حتى والتطبيق مقفول</b><small>يضيف مواعيد الصلاة لتقويم الموبايل لمدة 30 يوم، والتقويم بينبهك في كل صلاة</small></span>
       <button class="btn" style="height:38px;padding:0 14px" data-act="ics">إضافة</button></div>
-    <p class="note">الأذان بصوت الشيخ بيشتغل تلقائي طول ما التطبيق مفتوح أو شغال في الخلفية. المتصفحات مش بتسمح لأي موقع إنه يشغّل صوت لوحده وهو مقفول خالص، فلو هتقفله فعّل «تنبيه أكيد» عشان التقويم ينبهك.${IS_ANDROID && !NATIVE ? ` أو <a href="${APK_URL}" style="color:var(--gold)">حمّل تطبيق أندرويد</a> والأذان هيشتغل حتى وهو مقفول.` : ""}</p>
+    <p class="note">الأذان بصوت الشيخ بيشتغل تلقائي طول ما التطبيق مفتوح أو شغال في الخلفية. المتصفحات مش بتسمح لأي موقع إنه يشغّل صوت لوحده وهو مقفول خالص، فلو هتقفله فعّل «تنبيه أكيد» عشان التقويم ينبهك.${IS_ANDROID && !NATIVE ? ` أو <a href="${APK_URL}" target="_blank" rel="noopener noreferrer" style="color:var(--gold)">حمّل تطبيق أندرويد</a> والأذان هيشتغل حتى وهو مقفول.` : ""}</p>
     ${NATIVE ? "</div>" : ""}
 
     <div class="sec-h"><h2>الإعدادات</h2></div>
@@ -2403,7 +2403,7 @@ function installCard(force) {
   if (NATIVE) return "";
   if (IS_ANDROID) return `<div class="install-card"><span class="install-ic"><img src="icons/icon-192.png?v=2" alt=""></span>
     <span class="grow"><b>تطبيق إسلام برو لأندرويد</b><small>كل محتوى الموقع، والأذان بصوت الشيخ في ميعاده حتى والتطبيق مقفول</small></span>
-    <span class="install-btns"><a class="btn" style="height:38px;padding:0 16px" href="${APK_URL}" download>تحميل</a></span></div>`;
+    <span class="install-btns"><a class="btn" style="height:38px;padding:0 16px" href="${APK_URL}" target="_blank" rel="noopener noreferrer">تحميل</a></span></div>`;
   if (isStandalone() || (!force && S.installHidden)) return "";
   return `<div class="install-card"><span class="install-ic"><img src="icons/icon-192.png?v=2" alt=""></span>
     <span class="grow"><b>ثبّت إسلام برو كتطبيق</b><small>أيقونة على الشاشة الرئيسية، يفتح ملء الشاشة، والأذان والإشعارات يشتغلوا أحسن</small></span>
