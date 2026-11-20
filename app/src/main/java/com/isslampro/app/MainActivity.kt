@@ -77,6 +77,8 @@ fun IslamProApp(player: ExoPlayer) {
     var search by remember { mutableStateOf("") }
     var ayat by remember { mutableStateOf<List<String>>(emptyList()) }
     var selectedChapter by remember { mutableStateOf<Chapter?>(null) }
+    var tafsir by remember { mutableStateOf<List<String>>(emptyList()) }
+    var showTafsir by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var athkarCount by remember { mutableIntStateOf(0) }
@@ -153,6 +155,8 @@ fun IslamProApp(player: ExoPlayer) {
                                     }
                                     val list = json.getJSONObject("data").getJSONArray("ayahs")
                                     ayat = (0 until list.length()).map { list.getJSONObject(it).getString("text") }
+                                    tafsir = emptyList()
+                                    showTafsir = false
                                 } catch (_: Exception) { error = "تعذر تحميل آيات السورة. حاول مرة أخرى." }
                                 loading = false
                             }
@@ -166,10 +170,34 @@ fun IslamProApp(player: ExoPlayer) {
                                 }
                                 if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold)
                                 if (error != null) Text(error!!, color = Color.Red, modifier = Modifier.padding(16.dp))
+                                TextButton(onClick = {
+                                    if (tafsir.isNotEmpty()) showTafsir = !showTafsir
+                                    else {
+                                        loading = true
+                                        kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                            val result = runCatching {
+                                                val response = JSONObject(URL("https://api.alquran.cloud/v1/surah/${selectedChapter!!.number}/ar.muyassar").readText())
+                                                val a = response.getJSONObject("data").getJSONArray("ayahs")
+                                                (0 until a.length()).map { a.getJSONObject(it).getString("text") }
+                                            }.getOrNull()
+                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                tafsir = result ?: emptyList()
+                                                showTafsir = tafsir.isNotEmpty()
+                                                loading = false
+                                                if (result == null) error = "تعذر تحميل التفسير حالياً."
+                                            }
+                                        }
+                                    }
+                                }) { Text(if (showTafsir) "إخفاء التفسير" else "التفسير الميسر") }
                                 LazyColumn(contentPadding = PaddingValues(20.dp)) {
                                     item { Text("بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ", modifier = Modifier.fillMaxWidth().padding(bottom = 18.dp), textAlign = TextAlign.Center, color = Green, fontSize = 22.sp, fontWeight = FontWeight.Bold) }
-                                    items(ayat.chunked(1).flatten()) { verse ->
-                                        Text(verse + " ۞", modifier = Modifier.fillMaxWidth().padding(vertical = 9.dp), textAlign = TextAlign.Center, color = Ink, fontSize = 24.sp, lineHeight = 48.sp)
+                                    items(ayat.indices.toList()) { index ->
+                                        Column(Modifier.fillMaxWidth().padding(vertical = 9.dp)) {
+                                            Text(ayat[index] + " ۞", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = Ink, fontSize = 24.sp, lineHeight = 48.sp)
+                                            if (showTafsir && tafsir.getOrNull(index) != null) {
+                                                Text(tafsir[index], modifier = Modifier.fillMaxWidth().padding(top = 8.dp).background(Color.White, RoundedCornerShape(12.dp)).padding(12.dp), color = Green, fontSize = 15.sp, lineHeight = 26.sp)
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -339,7 +367,7 @@ fun IslamProApp(player: ExoPlayer) {
                         Column(Modifier.fillMaxSize().padding(padding)) {
                             Header("المزيد من إسلام برو", "أقسام الموقع الأصلي")
                             listOf("إذاعات القرآن","القراء والتلاوات","التفسير","المكتبة الإسلامية","الابتهالات","الإعدادات").forEach { name ->
-                                Surface(color = Color.White, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp).clickable { page = if (name == "إذاعات القرآن") "الإذاعات" else name }) {
+                                Surface(color = Color.White, shape = RoundedCornerShape(14.dp), modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 5.dp).clickable { page = when (name) { "إذاعات القرآن" -> "الإذاعات"; "القراء والتلاوات" -> "القراء والتلاوات"; else -> name } }) {
                                     Text(name, modifier = Modifier.padding(18.dp), color = Ink, fontWeight = FontWeight.SemiBold)
                                 }
                             }
