@@ -240,7 +240,7 @@ fun IslamProApp(player: ExoPlayer) {
                                         Text("إسلام برو", color = Green, fontSize = 27.sp, fontWeight = FontWeight.Bold)
                                         Text("القرآن الكريم من أي مكان", color = Color.Gray, fontSize = 13.sp)
                                     }
-                                    Icon(Icons.Default.Mosque, null, tint = Gold, modifier = Modifier.size(38.dp))
+                                    Icon(Icons.Default.MenuBook, null, tint = Gold, modifier = Modifier.size(38.dp))
                                 }
                             }
                             item {
