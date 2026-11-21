@@ -2,6 +2,7 @@ plugins {
     id "com.android.application"
 }
 
+// Galaxy J7 compatibility build: Android WebView host, minSdk 21.
 android {
     namespace "com.gpldroid.isslampro"
     compileSdk 36
