@@ -32,6 +32,7 @@ public class AdhanPlaybackService extends Service {
         if (url == null || url.isEmpty()) { stopSelf(startId); return START_NOT_STICKY; }
         try {
             player = new MediaPlayer();
+            player.setWakeMode(this, android.os.PowerManager.PARTIAL_WAKE_LOCK);
             player.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
