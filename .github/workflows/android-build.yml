@@ -8,6 +8,14 @@ on:
         required: true
         type: boolean
         default: false
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "android-twa/**"
+      - "app.js"
+      - "sw.js"
+      - ".github/workflows/android-build.yml"
   push:
     branches:
       - main
