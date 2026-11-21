@@ -20,6 +20,9 @@ import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import java.lang.ref.WeakReference;
+import java.util.Collections;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
 import android.graphics.Color;
 
 public class MainActivity extends Activity {
@@ -72,7 +75,22 @@ public class MainActivity extends Activity {
 
         webView = new WebView(this);
         activeWebView = new WeakReference<>(webView);
-        webView.addJavascriptInterface(new NativeBridge(this), "UltraQuranNative");
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
+                && WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
+            WebViewCompat.addWebMessageListener(webView, "AndroidHost",
+                Collections.singleton("https://gpldroid.github.io"),
+                (view, message, sourceOrigin, isMainFrame, replyProxy) -> {
+                    if (isMainFrame) NativeBridge.handle(this, message.getData());
+                });
+            String bridgeScript = "(()=>{const send=(method,args=[])=>window.AndroidHost.postMessage(JSON.stringify({method,args}));"
+                + "window.UltraQuranNative={playbackState:(...a)=>send('playbackState',a),"
+                + "schedulePrayers:(...a)=>send('schedulePrayers',a),clearPrayers:()=>send('clearPrayers'),"
+                + "testAdhan:(...a)=>send('testAdhan',a),batteryFree:()=>false,"
+                + "openBatterySettings:()=>send('openBatterySettings'),"
+                + "openNotificationSettings:()=>send('openNotificationSettings')};})();";
+            WebViewCompat.addDocumentStartJavaScript(webView, bridgeScript,
+                Collections.singleton("https://gpldroid.github.io"));
+        }
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progress.setMax(100);
         FrameLayout.LayoutParams bar = new FrameLayout.LayoutParams(
@@ -212,7 +230,6 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         if (webView != null) {
             if (activeWebView.get() == webView) activeWebView.clear();
-            webView.removeJavascriptInterface("UltraQuranNative");
             webView.stopLoading();
             webView.setWebChromeClient(null);
             webView.setWebViewClient(null);
