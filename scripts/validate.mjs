@@ -2,16 +2,17 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
 
 const root = process.cwd();
 const read = (file) => readFileSync(path.join(root, file), "utf8");
 const parseJSON = (file) => {
   try { return JSON.parse(read(file)); }
-  catch (error) { throw new Error(`Invalid JSON in ${file}: ${error.message}`); }
+  catch (error) { throw new Error(\`Invalid JSON in \${file}: \${error.message}\`); }
 };
 const localPath = (raw, from = ".") => {
-  const value = raw.trim().replace(/\\\\/g, "/");
-  if (!value || /^(?:#|https?:|\\/\\/|data:|blob:|mailto:|tel:|javascript:)/i.test(value)) return null;
+  const value = raw.trim().replace(/\\/g, "/");
+  if (!value || /^(?:#|https?:|\/\/|data:|blob:|mailto:|tel:|javascript:)/i.test(value)) return null;
   const pathname = value.split(/[?#]/, 1)[0];
   if (!pathname || pathname.startsWith("/")) return null;
   return path.resolve(root, from, decodeURIComponent(pathname));
@@ -19,15 +20,12 @@ const localPath = (raw, from = ".") => {
 const checkLocalReference = (raw, from, label) => {
   const target = localPath(raw, from);
   if (!target) return;
-  assert.ok(target.startsWith(root + path.sep) || target === root, `${label} escapes the repository: ${raw}`);
-  assert.ok(existsSync(target), `${label} points to a missing file: ${raw}`);
+  assert.ok(target.startsWith(root + path.sep) || target === root, \`\${label} escapes the repository: \${raw}\`);
+  assert.ok(existsSync(target), \`\${label} points to a missing file: \${raw}\`);
 };
 
 for (const file of ["app.js", "prayer-calc.js", "sw.js"]) {
-  const result = await import("node:child_process").then(({ execFileSync }) =>
-    execFileSync(process.execPath, ["--check", file], { cwd: root, stdio: "pipe" })
-  );
-  void result;
+  execFileSync(process.execPath, ["--check", file], { cwd: root, stdio: "pipe" });
 }
 
 const manifest = parseJSON("manifest.webmanifest");
@@ -49,11 +47,11 @@ assert.ok(Array.isArray(radios) && radios.length >= 100, "Radio catalogue looks 
 assert.ok(Array.isArray(adhan) && adhan.length > 0, "Adhan catalogue must not be empty");
 
 const html = read("index.html");
-for (const match of html.matchAll(/\\b(?:src|href)\\s*=\\s*["']([^"']+)["']/gi)) {
+for (const match of html.matchAll(/\b(?:src|href)\s*=\s*["']([^"']+)["']/gi)) {
   checkLocalReference(match[1], ".", "index.html asset");
 }
 const css = read("style.css");
-for (const match of css.matchAll(/url\\(\\s*["']?([^"'\\)]+)["']?\\s*\\)/gi)) {
+for (const match of css.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/gi)) {
   checkLocalReference(match[1], ".", "style.css asset");
 }
 
