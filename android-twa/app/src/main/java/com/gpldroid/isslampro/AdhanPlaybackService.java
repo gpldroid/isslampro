@@ -5,6 +5,7 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.media.AudioAttributes;
 import android.media.MediaPlayer;
 import android.os.Build;
@@ -24,25 +25,63 @@ public class AdhanPlaybackService extends Service {
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         String title = intent == null ? "حان وقت الصلاة" : intent.getStringExtra("title");
         String url = intent == null ? null : intent.getStringExtra("url");
-        startForeground(NOTIFICATION_ID, notification(title));
-        if (player != null) {
-            try { player.stop(); player.release(); } catch (Exception ignored) { }
-            player = null;
+        Notification notification = notification(title);
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
         }
-        if (url == null || url.isEmpty()) { stopSelf(startId); return START_NOT_STICKY; }
+
+        releasePlayer();
+        if (url == null || url.trim().isEmpty()) {
+            stopForeground(true);
+            stopSelf(startId);
+            return START_NOT_STICKY;
+        }
+
         try {
-            player = new MediaPlayer();
-            player.setWakeMode(this, android.os.PowerManager.PARTIAL_WAKE_LOCK);
-            player.setAudioAttributes(new AudioAttributes.Builder()
+            MediaPlayer next = new MediaPlayer();
+            player = next;
+            next.setWakeMode(this, android.os.PowerManager.PARTIAL_WAKE_LOCK);
+            next.setAudioAttributes(new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build());
-            player.setOnPreparedListener(MediaPlayer::start);
-            player.setOnCompletionListener(mp -> stopSelf());
-            player.setOnErrorListener((mp, what, extra) -> { stopSelf(); return true; });
-            player.setDataSource(url);
-            player.prepareAsync();
-        } catch (Exception e) { stopSelf(startId); }
+            next.setOnPreparedListener(mp -> {
+                if (player == mp) mp.start();
+            });
+            next.setOnCompletionListener(mp -> {
+                if (player == mp) {
+                    releasePlayer();
+                    stopForeground(true);
+                    stopSelf(startId);
+                }
+            });
+            next.setOnErrorListener((mp, what, extra) -> {
+                if (player == mp) {
+                    releasePlayer();
+                    stopForeground(true);
+                    stopSelf(startId);
+                }
+                return true;
+            });
+            next.setDataSource(url);
+            next.prepareAsync();
+        } catch (Exception e) {
+            releasePlayer();
+            stopForeground(true);
+            stopSelf(startId);
+        }
         return START_NOT_STICKY;
+    }
+
+    private void releasePlayer() {
+        if (player != null) {
+            try { player.setOnPreparedListener(null); player.setOnCompletionListener(null); player.setOnErrorListener(null); }
+            catch (Exception ignored) { }
+            try { if (player.isPlaying()) player.stop(); } catch (Exception ignored) { }
+            try { player.release(); } catch (Exception ignored) { }
+            player = null;
+        }
     }
 
     private Notification notification(String title) {
@@ -66,7 +105,7 @@ public class AdhanPlaybackService extends Service {
     }
 
     @Override public void onDestroy() {
-        if (player != null) { try { player.stop(); player.release(); } catch (Exception ignored) { } player = null; }
+        releasePlayer();
         stopForeground(true);
         super.onDestroy();
     }
