@@ -51,7 +51,7 @@ async function staleWhileRevalidate(req, name) {
 async function audioRangeFromCache(req, cached) {
   const header = req.headers.get("range") || "";
   const length = Number(cached.headers.get("content-length"));
-  const match = /^bytes=(\\d*)-(\\d*)$/.exec(header);
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header);
   if (!match || !Number.isFinite(length) || length <= 0 || !cached.body) return cached;
   let start, end;
   if (!match[1]) { const suffix = Number(match[2]); if (!suffix) return cached; start = Math.max(0, length - suffix); end = length - 1; }
