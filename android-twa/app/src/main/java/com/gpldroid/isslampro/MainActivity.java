@@ -19,6 +19,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
+import java.lang.ref.WeakReference;
 import android.graphics.Color;
 
 public class MainActivity extends Activity {
@@ -27,6 +28,11 @@ public class MainActivity extends Activity {
     private static final String INTERNAL_PATH = "/isslampro/";
     private static final String GEO_ORIGIN = "https://gpldroid.github.io";
     private static final int LOCATION_REQUEST = 4102;
+    private static WeakReference<WebView> activeWebView = new WeakReference<>(null);
+    static void sendToPage(String command) {
+        WebView view = activeWebView.get();
+        if (view != null) view.post(() -> view.evaluateJavascript("if(window.__nativeCmd)window.__nativeCmd('" + command + "')", null));
+    }
     private WebView webView;
     private ProgressBar progress;
     private GeolocationPermissions.Callback pendingGeoCallback;
@@ -65,6 +71,8 @@ public class MainActivity extends Activity {
         }
 
         webView = new WebView(this);
+        activeWebView = new WeakReference<>(webView);
+        webView.addJavascriptInterface(new NativeBridge(this), "UltraQuranNative");
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progress.setMax(100);
         FrameLayout.LayoutParams bar = new FrameLayout.LayoutParams(
@@ -203,6 +211,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         if (webView != null) {
+            if (activeWebView.get() == webView) activeWebView.clear();
+            webView.removeJavascriptInterface("UltraQuranNative");
             webView.stopLoading();
             webView.setWebChromeClient(null);
             webView.setWebViewClient(null);
