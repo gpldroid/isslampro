@@ -177,9 +177,9 @@ jobs:
         run: |
           {
             echo "## IsslamPro Android build"
-            echo "- Application ID: `com.gpldroid.isslampro`"
-            echo "- Version: `1.0.3 (4)`"
-            echo "- Target SDK: `36`"
+            echo "- Application ID: com.gpldroid.isslampro"
+            echo "- Version: 1.0.4 (5)"
+            echo "- Target SDK: 36"
             if [[ "${{ inputs.signed_release }}" == "true" ]]; then
               echo "- Signed release requested; check the release artifact above."
             else
