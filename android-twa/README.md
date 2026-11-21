@@ -6,6 +6,8 @@ Android application shell for the IsslamPro Quran and prayer app:
 
 This project uses a native Android WebView host (not a Trusted Web Activity). The goal of this branch is to improve Quran audio playback, offline listening, prayer scheduling, and adhan playback. No app-store submission is part of this work.
 
+The Android host loads the website at `https://gpldroid.github.io/isslampro/`. Therefore, web-layer changes committed only to this PR branch are not automatically present in the installed APK until the hosted website is deployed from the matching revision (or a separate preview deployment is used). Keep this in mind when testing the APK; native Android changes are packaged in the APK, while `app.js` and `sw.js` are served remotely.
+
 ## Build configuration
 
 - Application ID: `com.gpldroid.isslampro`
