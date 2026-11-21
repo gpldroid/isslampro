@@ -75,9 +75,8 @@
   --paper: #fffdf5;
   --line: #9b7b3d40;
 }
-:root[data-theme="light"] html,
-:root[data-theme="light"] body,
-html:has(:root[data-theme="light"]) { background: #f3f6f2; }
+html[data-theme="light"],
+:root[data-theme="light"] body { background: #f3f6f2; }
 :root[data-theme="light"] body {
   background: #f3f6f2 !important;
   color: #263b32;
