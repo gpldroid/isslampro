@@ -22,7 +22,7 @@ function nativePlayback(t, playing) {
   const sig = t ? `${t.u}|${playing}` : "none";
   if (sig === nativeSig) return;
   nativeSig = sig;
-  try { t ? NATIVE.playbackState(t.t || "", t.s || "", !!playing, true) : NATIVE.playbackState("", "", false, false); } catch {}
+  try { t ? NATIVE.playbackState(t.t || "", t.s || "", !!playing, true, t.u || "") : NATIVE.playbackState("", "", false, false, ""); } catch {}
 }
 window.__nativeCmd = (c) => {
   if (c === "toggle") toggle(); else if (c === "next") next(); else if (c === "prev") prev(); else if (c === "stop") closePlayer();
