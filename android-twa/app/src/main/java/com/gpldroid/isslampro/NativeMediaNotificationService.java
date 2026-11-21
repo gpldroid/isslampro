@@ -74,10 +74,9 @@ public class NativeMediaNotificationService extends Service {
             session.setActive(true);
         }
         Notification notification = buildNotification();
-        if (playing) {
-            if (Build.VERSION.SDK_INT >= 29) startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
-            else startForeground(ID, notification);
-        } else {
+        if (Build.VERSION.SDK_INT >= 29) startForeground(ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        else startForeground(ID, notification);
+        if (!playing) {
             stopForeground(false);
             getSystemService(NotificationManager.class).notify(ID, notification);
         }
