@@ -19,6 +19,10 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.Button;
+import android.view.Gravity;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import androidx.webkit.WebViewCompat;
@@ -31,6 +35,7 @@ public class MainActivity extends Activity {
     private static final String INTERNAL_PATH = "/isslampro/";
     private static final String GEO_ORIGIN = "https://gpldroid.github.io";
     private static final int LOCATION_REQUEST = 4102;
+    private static final int NOTIFICATION_REQUEST = 4103;
     private static WeakReference<WebView> activeWebView = new WeakReference<>(null);
     static void sendToPage(String command) {
         WebView view = activeWebView.get();
@@ -38,6 +43,8 @@ public class MainActivity extends Activity {
     }
     private WebView webView;
     private ProgressBar progress;
+    private FrameLayout root;
+    private View offlinePanel;
     private GeolocationPermissions.Callback pendingGeoCallback;
     private String pendingGeoOrigin;
 
@@ -55,7 +62,7 @@ public class MainActivity extends Activity {
         }
         window.getDecorView().setSystemUiVisibility(0);
 
-        FrameLayout root = new FrameLayout(this);
+        root = new FrameLayout(this);
         root.setBackgroundColor(Color.rgb(8, 36, 35));
         if (Build.VERSION.SDK_INT >= 30) {
             root.setOnApplyWindowInsetsListener((view, insets) -> {
@@ -119,6 +126,38 @@ public class MainActivity extends Activity {
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                hideOfflinePanel();
+                super.onPageStarted(view, url, favicon);
+            }
+
+            @Override
+            public void onPageCommitVisible(WebView view, String url) {
+                hideOfflinePanel();
+                requestNotificationPermissionOnce();
+                super.onPageCommitVisible(view, url);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, android.webkit.WebResourceError error) {
+                if (request.isForMainFrame()) showOfflinePanel();
+                super.onReceivedError(view, request, error);
+            }
+
+            @SuppressWarnings("deprecation")
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                if (failingUrl != null && failingUrl.equals(view.getUrl())) showOfflinePanel();
+                super.onReceivedError(view, errorCode, description, failingUrl);
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse response) {
+                if (request.isForMainFrame() && response.getStatusCode() >= 500) showOfflinePanel();
+                super.onReceivedHttpError(view, request, response);
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 return routeUrl(request.getUrl());
             }
@@ -164,6 +203,60 @@ public class MainActivity extends Activity {
         } else {
             webView.restoreState(state);
         }
+    }
+
+    private void requestNotificationPermissionOnce() {
+        if (Build.VERSION.SDK_INT < 33 || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return;
+        android.content.SharedPreferences prefs = getSharedPreferences("isslampro_permissions", MODE_PRIVATE);
+        if (prefs.getBoolean("notification_prompted", false)) return;
+        prefs.edit().putBoolean("notification_prompted", true).apply();
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, NOTIFICATION_REQUEST);
+    }
+
+    private void showOfflinePanel() {
+        if (root == null || isFinishing()) return;
+        if (offlinePanel == null) {
+            LinearLayout panel = new LinearLayout(this);
+            panel.setOrientation(LinearLayout.VERTICAL);
+            panel.setGravity(Gravity.CENTER);
+            panel.setPadding(dp(28), dp(24), dp(28), dp(24));
+            panel.setBackgroundColor(Color.rgb(8, 36, 35));
+
+            TextView title = new TextView(this);
+            title.setText("تعذر الاتصال بإسلام برو");
+            title.setTextColor(Color.rgb(232, 208, 151));
+            title.setTextSize(22);
+            title.setGravity(Gravity.CENTER);
+            title.setTypeface(null, android.graphics.Typeface.BOLD);
+            panel.addView(title, new LinearLayout.LayoutParams(-1, -2));
+
+            TextView message = new TextView(this);
+            message.setText("تحقق من اتصال الإنترنت ثم أعد المحاولة. يمكنك الرجوع إلى التطبيق بمجرد عودة الاتصال.");
+            message.setTextColor(Color.WHITE);
+            message.setTextSize(16);
+            message.setGravity(Gravity.CENTER);
+            LinearLayout.LayoutParams messageParams = new LinearLayout.LayoutParams(-1, -2);
+            messageParams.topMargin = dp(14);
+            panel.addView(message, messageParams);
+
+            Button retry = new Button(this);
+            retry.setText("إعادة المحاولة");
+            retry.setOnClickListener(v -> {
+                hideOfflinePanel();
+                if (webView != null) webView.reload();
+            });
+            LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(-2, -2);
+            buttonParams.topMargin = dp(22);
+            panel.addView(retry, buttonParams);
+            offlinePanel = panel;
+            root.addView(offlinePanel, new FrameLayout.LayoutParams(-1, -1));
+        }
+        offlinePanel.setVisibility(View.VISIBLE);
+        progress.setVisibility(View.GONE);
+    }
+
+    private void hideOfflinePanel() {
+        if (offlinePanel != null) offlinePanel.setVisibility(View.GONE);
     }
 
     private boolean routeUrl(Uri uri) {
