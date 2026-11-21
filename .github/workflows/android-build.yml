@@ -23,6 +23,8 @@ on:
       - play-store-prep
     paths:
       - "android-twa/**"
+      - "app.js"
+      - "sw.js"
       - ".github/workflows/android-build.yml"
 
 permissions:
