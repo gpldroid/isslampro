@@ -44,20 +44,25 @@ final class NativeBridge {
                 case "openNotificationSettings":
                     openNotificationSettings(context);
                     break;
+                case "openExactAlarmSettings":
+                    openExactAlarmSettings(context);
+                    break;
             }
         } catch (Exception ignored) { }
     }
 
     private static void openBatterySettings(Context context) {
-        try {
-            Intent intent = new Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+        Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        context.startActivity(intent);
+    }
+
+    private static void openExactAlarmSettings(Context context) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
                 Uri.parse("package:" + context.getPackageName()));
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
-        } catch (Exception e) {
-            Intent intent = new Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
+            try { context.startActivity(intent); } catch (Exception ignored) { }
         }
     }
 
