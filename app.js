@@ -129,7 +129,9 @@ async function loadCur(autoplay) {
   if (S.saved[t.u] && "caches" in window) {
     try {
       const hit = await (await caches.open("uq-audio")).match(t.u);
-      if (hit) { P.obj = URL.createObjectURL(await hit.blob()); src = P.obj; }
+      // Keep the original media URL; the service worker serves cached byte ranges
+      // without copying a long recitation into one page-level Blob.
+      if (!hit) { delete S.saved[t.u]; save(true); }
     } catch {}
   }
   A.preload = "metadata";
@@ -397,7 +399,8 @@ async function saveOffline(t) {
   }
   if (!("caches" in window)) { toast("المتصفح ده مبيدعمش الحفظ بدون نت"); return; }
   try {
-    if (navigator.storage?.persist) navigator.storage.persist();
+    let persistentStorage = false;
+    try { if (navigator.storage?.persist) persistentStorage = await navigator.storage.persist(); } catch {}
     toast("جاري حفظ المقطع…", 60000);
     const r = await fetch(t.u, { mode: "cors" });
     if (!r.ok) throw new Error(r.status);
@@ -413,7 +416,7 @@ async function saveOffline(t) {
     }
     const size = got;
     await cacheWrite;
-    S.saved[t.u] = { ...t, size, at: Date.now() }; save(true);
+    S.saved[t.u] = { ...t, size, at: Date.now(), persistentStorage }; save(true);
     toast("اتحفظ ✓ تقدر تسمعه من غير نت من «محفوظاتي»");
   } catch {
     toast("الحفظ مكملش، اتأكد من النت وجرّب تاني");
