@@ -522,7 +522,7 @@ const TILES = [
 function setTop(title, opts = {}) {
   const top = $("#top");
   if (opts.home) {
-    top.innerHTML = `<span class="brand"><svg aria-hidden="true"><use href="#i-logo"/></svg><h1 data-t="إسلام برو">إسلام برو</h1></span>
+    top.innerHTML = `<a class="brand" href="#/" aria-label="العودة إلى الصفحة الرئيسية"><svg aria-hidden="true"><use href="#i-logo"/></svg><h1 data-t="إسلام برو">إسلام برو</h1></a>
 
       <button class="btn-icon" data-go="#/search" aria-label="بحث">${ic("search")}</button>`;
   } else {
