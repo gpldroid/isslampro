@@ -402,16 +402,17 @@ async function saveOffline(t) {
     const r = await fetch(t.u, { mode: "cors" });
     if (!r.ok) throw new Error(r.status);
     const total = +r.headers.get("content-length") || 0;
-    const reader = r.body.getReader(); const parts = []; let got = 0, lastShow = 0;
+    const cache = await caches.open("uq-audio");
+    const cacheWrite = cache.put(t.u, r.clone());
+    const reader = r.body.getReader(); let got = 0, lastShow = 0;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      parts.push(value); got += value.length;
+      got += value.length;
       if (total && Date.now() - lastShow > 500) { lastShow = Date.now(); toast(`جاري الحفظ ${n2a(Math.round((got / total) * 100))}٪`, 60000); }
     }
     const size = got;
-    const type = r.headers.get("content-type") || "audio/mpeg";
-    await (await caches.open("uq-audio")).put(t.u, new Response(new Blob(parts, { type }), { headers: { "Content-Type": type, "Content-Length": String(size) } }));
+    await cacheWrite;
     S.saved[t.u] = { ...t, size, at: Date.now() }; save(true);
     toast("اتحفظ ✓ تقدر تسمعه من غير نت من «محفوظاتي»");
   } catch {
@@ -2279,7 +2280,7 @@ async function prayer(parts) {
     <div class="btn-row"><button class="btn ghost" data-act="testAdhan">${ic("play")}جرّب الأذان</button></div>
 
     <div class="sec-h"><h2>التنبيهات</h2></div>
-    ${NATIVE ? `<div class="setting app-ok"><span class="grow"><b>${c.auto ? "أكّد مدينتك عشان الأذان يشتغل" : "الأذان شغال حتى والتطبيق مقفول ✓"}</b><small>التطبيق بيشغّل الأذان بصوت الشيخ في ميعاده والشاشة مقفولة، وبيحفظ صوت الأذان على الموبايل عشان يشتغل من غير نت</small></span></div>
+    ${NATIVE ? `<div class="setting app-ok"><span class="grow"><b>${c.auto ? "أكّد مدينتك عشان الأذان يشتغل" : "الأذان شغال حتى والتطبيق مقفول ✓"}</b><small>تُجدول تنبيهات الصلاة محلياً على الجهاز. دقة التوقيت تعتمد على سماح المنبهات الدقيقة وإعدادات النظام، وقد يحتاج تشغيل صوت الأذان إلى اتصال بالإنترنت.</small></span></div>
       ${(() => { try { return NATIVE.batteryFree() ? "" : `<div class="setting"><span class="grow"><b>اسمح للتطبيق يشتغل في الخلفية</b><small>بعض الموبايلات بتقفل التطبيقات لتوفير البطارية، وده ممكن يأخر الأذان</small></span><button class="btn" style="height:38px;padding:0 14px" data-act="battery">السماح</button></div>`; } catch { return ""; } })()}
       <div class="setting"><span class="grow"><b>دقة تنبيهات الصلاة</b><small>اسمح بالمنبهات الدقيقة ليصل التنبيه في وقت الصلاة المحدد، إذا كان الخيار متاحاً على جهازك.</small></span><button class="btn ghost" style="height:38px;padding:0 14px" data-act="exactAlarm">ضبط</button></div>
       <div class="setting"><span class="grow"><b>إشعارات التطبيق</b><small>لو الإشعارات مقفولة، الأذان مش هيبان على الشاشة</small></span><button class="btn ghost" style="height:38px;padding:0 14px" data-act="appNotify">الإعدادات</button></div>
