@@ -2,18 +2,17 @@ plugins {
     id "com.android.application"
 }
 
-// Galaxy J7 compatibility build: Android WebView host, minSdk 21.
+// Google Play production baseline: Android 16 target, Android 5.0+ compatibility.
 android {
     namespace "com.gpldroid.isslampro"
     compileSdk 36
 
     defaultConfig {
         applicationId "com.gpldroid.isslampro"
-        // Android 5.0+; supports older Galaxy J7 models than the former TWA build.
         minSdk 21
-        targetSdk 35
-        versionCode 3
-        versionName "1.0.2"
+        targetSdk 36
+        versionCode 4
+        versionName "1.0.3"
     }
 
     signingConfigs {
