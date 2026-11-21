@@ -128,7 +128,7 @@ async function loadCur(autoplay) {
   // drop the tap that allows playback to start.
   if (S.saved[t.u] && "caches" in window) {
     try {
-      const hit = await (await caches.open("uq-audio")).match(t.u);
+      const hit = await (await caches.open("uq-audio")).match(t.u, { ignoreVary: true });
       // Keep the original media URL; the service worker serves cached byte ranges
       // without copying a long recitation into one page-level Blob.
       if (!hit) { delete S.saved[t.u]; save(true); }
@@ -398,6 +398,7 @@ async function saveOffline(t) {
     delete S.saved[t.u]; save(true); toast("تم حذف المقطع من الحفظ بدون نت"); return;
   }
   if (!("caches" in window)) { toast("المتصفح ده مبيدعمش الحفظ بدون نت"); return; }
+  let audioCache = null;
   try {
     let persistentStorage = false;
     try { if (navigator.storage?.persist) persistentStorage = await navigator.storage.persist(); } catch {}
@@ -405,8 +406,8 @@ async function saveOffline(t) {
     const r = await fetch(t.u, { mode: "cors" });
     if (!r.ok) throw new Error(r.status);
     const total = +r.headers.get("content-length") || 0;
-    const cache = await caches.open("uq-audio");
-    const cacheWrite = cache.put(t.u, r.clone());
+    audioCache = await caches.open("uq-audio");
+    const cacheWrite = audioCache.put(t.u, r.clone());
     const reader = r.body.getReader(); let got = 0, lastShow = 0;
     for (;;) {
       const { done, value } = await reader.read();
@@ -419,6 +420,7 @@ async function saveOffline(t) {
     S.saved[t.u] = { ...t, size, at: Date.now(), persistentStorage }; save(true);
     toast("اتحفظ ✓ تقدر تسمعه من غير نت من «محفوظاتي»");
   } catch {
+    if (audioCache) { try { await audioCache.delete(t.u); } catch {} }
     toast("الحفظ مكملش، اتأكد من النت وجرّب تاني");
   }
   if ($("#sheet").classList.contains("open")) renderSheet(true);
