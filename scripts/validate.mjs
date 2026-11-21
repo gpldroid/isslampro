@@ -8,7 +8,7 @@ const root = process.cwd();
 const read = (file) => readFileSync(path.join(root, file), "utf8");
 const parseJSON = (file) => {
   try { return JSON.parse(read(file)); }
-  catch (error) { throw new Error(\`Invalid JSON in \${file}: \${error.message}\`); }
+  catch (error) { throw new Error("Invalid JSON in " + file + ": " + error.message); }
 };
 const localPath = (raw, from = ".") => {
   const value = raw.trim().replace(/\\/g, "/");
@@ -20,8 +20,8 @@ const localPath = (raw, from = ".") => {
 const checkLocalReference = (raw, from, label) => {
   const target = localPath(raw, from);
   if (!target) return;
-  assert.ok(target.startsWith(root + path.sep) || target === root, \`\${label} escapes the repository: \${raw}\`);
-  assert.ok(existsSync(target), \`\${label} points to a missing file: \${raw}\`);
+  assert.ok(target.startsWith(root + path.sep) || target === root, label + " escapes the repository: " + raw);
+  assert.ok(existsSync(target), label + " points to a missing file: " + raw);
 };
 
 for (const file of ["app.js", "prayer-calc.js", "sw.js"]) {
