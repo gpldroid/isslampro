@@ -409,9 +409,10 @@ async function saveOffline(t) {
       parts.push(value); got += value.length;
       if (total && Date.now() - lastShow > 500) { lastShow = Date.now(); toast(`جاري الحفظ ${n2a(Math.round((got / total) * 100))}٪`, 60000); }
     }
-    const blob = new Blob(parts, { type: r.headers.get("content-type") || "audio/mpeg" });
-    await (await caches.open("uq-audio")).put(t.u, new Response(blob, { headers: { "Content-Type": blob.type, "Content-Length": String(blob.size) } }));
-    S.saved[t.u] = { ...t, size: blob.size, at: Date.now() }; save(true);
+    const size = got;
+    const type = r.headers.get("content-type") || "audio/mpeg";
+    await (await caches.open("uq-audio")).put(t.u, new Response(new Blob(parts, { type }), { headers: { "Content-Type": type, "Content-Length": String(size) } }));
+    S.saved[t.u] = { ...t, size, at: Date.now() }; save(true);
     toast("اتحفظ ✓ تقدر تسمعه من غير نت من «محفوظاتي»");
   } catch {
     toast("الحفظ مكملش، اتأكد من النت وجرّب تاني");
@@ -2280,6 +2281,7 @@ async function prayer(parts) {
     <div class="sec-h"><h2>التنبيهات</h2></div>
     ${NATIVE ? `<div class="setting app-ok"><span class="grow"><b>${c.auto ? "أكّد مدينتك عشان الأذان يشتغل" : "الأذان شغال حتى والتطبيق مقفول ✓"}</b><small>التطبيق بيشغّل الأذان بصوت الشيخ في ميعاده والشاشة مقفولة، وبيحفظ صوت الأذان على الموبايل عشان يشتغل من غير نت</small></span></div>
       ${(() => { try { return NATIVE.batteryFree() ? "" : `<div class="setting"><span class="grow"><b>اسمح للتطبيق يشتغل في الخلفية</b><small>بعض الموبايلات بتقفل التطبيقات لتوفير البطارية، وده ممكن يأخر الأذان</small></span><button class="btn" style="height:38px;padding:0 14px" data-act="battery">السماح</button></div>`; } catch { return ""; } })()}
+      <div class="setting"><span class="grow"><b>دقة تنبيهات الصلاة</b><small>اسمح بالمنبهات الدقيقة ليصل التنبيه في وقت الصلاة المحدد، إذا كان الخيار متاحاً على جهازك.</small></span><button class="btn ghost" style="height:38px;padding:0 14px" data-act="exactAlarm">ضبط</button></div>
       <div class="setting"><span class="grow"><b>إشعارات التطبيق</b><small>لو الإشعارات مقفولة، الأذان مش هيبان على الشاشة</small></span><button class="btn ghost" style="height:38px;padding:0 14px" data-act="appNotify">الإعدادات</button></div>
       <div style="display:none">` : ""}
     <div class="setting"><span class="grow"><b>إشعار وقت الصلاة</b><small>إشعار على الموبايل مع الأذان</small></span>
@@ -2753,6 +2755,7 @@ document.addEventListener("click", async (e) => {
     }
     case "battery": if (NATIVE) NATIVE.openBatterySettings(); break;
     case "appNotify": if (NATIVE) NATIVE.openNotificationSettings(); break;
+     case "exactAlarm": if (NATIVE) NATIVE.openExactAlarmSettings(); break;
     case "gps": locateMe(); break;
     case "confirmCity": { const c = prayerCfg(); c.auto = false; save(true); toast(`تم ✓ الأذان هيشتغل على مواقيت ${c.name}`); route(); break; }
     case "ics": buildICS(); break;
