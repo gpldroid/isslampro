@@ -105,6 +105,6 @@ final class PrayerScheduler {
 
     private static int requestCode(long at, String prayer) {
         long minute = at / 60000L;
-        return (int) (minute ^ (minute >>> 32) ^ prayer.hashCode());
+        return (int) (minute * 31L) + prayer.hashCode();
     }
 }
