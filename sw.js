@@ -1,7 +1,6 @@
-/* Ultra Quran service worker: app shell offline, data refreshed in the background,
-   Mushaf pages and fonts cached after first view. Audio is not intercepted
-   (offline audio is read from the "uq-audio" cache by the page itself). */
-const VERSION = "uq-shell-58";
+/* IsslamPro service worker: app shell offline, data refreshed in the background,
+   Mushaf pages/fonts cached after first view, and saved audio served from Cache Storage. */
+const VERSION = "uq-shell-59";
 const SHELL = [
   "./", "index.html", "style.css?v=56", "app.js?v=57", "prayer-calc.js?v=56", "style.css", "app.js", "manifest.webmanifest",
   "img/lattice.svg", "img/bg.webp", "img/bg-m.webp", "fonts/Cairo-SemiBold.ttf", "img/star.svg", "icons/icon-192.png?v=2", "icons/icon-512.png?v=2",
@@ -47,10 +46,53 @@ async function staleWhileRevalidate(req, name) {
   return hit || net;
 }
 
+// Stream byte-range slices from the cached full audio response without creating a page Blob.
+async function audioRangeFromCache(req, cached) {
+  const header = req.headers.get("range") || "";
+  const length = Number(cached.headers.get("content-length"));
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header);
+  if (!match || !Number.isFinite(length) || length <= 0 || !cached.body) return cached;
+  let start, end;
+  if (!match[1]) { const suffix = Number(match[2]); if (!suffix) return cached; start = Math.max(0, length - suffix); end = length - 1; }
+  else { start = Number(match[1]); end = match[2] ? Math.min(Number(match[2]), length - 1) : length - 1; }
+  if (start >= length || end < start) return new Response(null, { status: 416, headers: { "Content-Range": "bytes */" + length } });
+  const expected = end - start + 1, reader = cached.body.getReader();
+  let position = 0, sent = 0;
+  const body = new ReadableStream({
+    async pull(controller) {
+      try {
+        while (sent < expected) {
+          const part = await reader.read();
+          if (part.done) { controller.close(); return; }
+          const chunkStart = position, chunkEnd = position + part.value.byteLength;
+          position = chunkEnd;
+          if (chunkEnd <= start) continue;
+          const from = Math.max(0, start - chunkStart), to = Math.min(part.value.byteLength, end + 1 - chunkStart);
+          if (to > from) { const slice = part.value.slice(from, to); controller.enqueue(slice); sent += slice.byteLength; }
+        }
+        controller.close(); reader.cancel().catch(() => {});
+      } catch (error) { controller.error(error); }
+    },
+    cancel() { reader.cancel().catch(() => {}); }
+  });
+  const headers = new Headers(cached.headers);
+  headers.delete("content-encoding"); headers.set("Accept-Ranges", "bytes");
+  headers.set("Content-Range", "bytes " + start + "-" + end + "/" + length);
+  headers.set("Content-Length", String(expected));
+  return new Response(body, { status: 206, statusText: "Partial Content", headers });
+}
+
 self.addEventListener("fetch", (e) => {
   const req = e.request;
-  if (req.method !== "GET" || req.headers.has("range")) return;
+  if (req.method !== "GET") return;
   const url = new URL(req.url);
+  if (req.headers.has("range")) {
+    return e.respondWith((async () => {
+      const audio = await caches.open("uq-audio");
+      const hit = await audio.match(req.url, { ignoreVary: true });
+      return hit ? audioRangeFromCache(req, hit) : fetch(req);
+    })());
+  }
   if (url.origin === location.origin) {
     // دولة التلاوة: new episodes should show up right away when online
     if (url.pathname.includes("/data/yt/")) return e.respondWith(networkFirst(req, "uq-data"));

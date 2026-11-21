@@ -1,33 +1,45 @@
-# Android TWA build
+# IsslamPro Android
 
-This directory wraps the existing Islam Pro PWA in a Trusted Web Activity. The website itself remains in the repository root and is not copied or rewritten.
+Android application shell for the IsslamPro Quran and prayer app:
+
+`https://gpldroid.github.io/isslampro/`
+
+This project uses a native Android WebView host (not a Trusted Web Activity). The goal of this branch is to improve Quran audio playback, offline listening, prayer scheduling, and adhan playback. No app-store submission is part of this work.
+
+The Android host loads the website at `https://gpldroid.github.io/isslampro/`. Therefore, web-layer changes committed only to this PR branch are not automatically present in the installed APK until the hosted website is deployed from the matching revision (or a separate preview deployment is used). Keep this in mind when testing the APK; native Android changes are packaged in the APK, while `app.js` and `sw.js` are served remotely.
+
+## Build configuration
 
 - Application ID: `com.gpldroid.isslampro`
-- Website: `https://gpldroid.github.io/isslampro/`
-- Android target API: 36 (required for new Google Play submissions from August 31, 2026)
-- Outputs: `download/app-release.apk` and `download/app-release.aab`
+- Version: `1.0.4 (versionCode 5)`
+- Minimum Android: API 21 (Android 5.0)
+- Compile SDK / Target SDK: 36
+- Java: 17
+- Gradle: 8.13
+- Android Gradle Plugin: 8.13.2
 
-## Required GitHub Actions secrets
+## Current implementation
 
-Add these repository secrets under Settings → Secrets and variables → Actions:
+- The WebView bridge is restricted to the trusted `https://gpldroid.github.io` origin and main-frame messages.
+- Quran audio uses the website player and a native Android media-session notification. Notification controls send play/pause/next/previous commands to the page.
+- Saved Quran audio is stored in the WebView Cache Storage library. The service worker now serves cached byte-range requests as streams, avoiding creation of a full in-memory Blob for long recordings.
+- Cache Storage persistence is requested when supported. Actual quota, eviction behavior, and offline playback still need testing on physical devices and with the audio providers used by the app.
+- Prayer alarms are stored locally and replaced cleanly when a new schedule arrives. Alarms are restored after reboot, app replacement, device date/time changes, and exact-alarm permission changes.
+- Exact alarms are used only when Android grants exact-alarm access; otherwise the app falls back to inexact idle-allowed alarms.
+- The adhan service starts as a media-playback foreground service and streams the selected adhan URL when its alarm fires. Offline adhan pre-download is not implemented; internet is required for a streamed adhan.
 
-- `ANDROID_KEYSTORE_BASE64`: Base64-encoded upload keystore (single-line Base64).
-- `ANDROID_KEYSTORE_PASSWORD`: keystore password.
-- `ANDROID_KEY_ALIAS`: key alias.
-- `ANDROID_KEY_PASSWORD`: key password.
+## Validation status and known limits
 
-Never commit the keystore or passwords.
+The GitHub Actions workflow builds an unsigned debug APK/AAB for validation and checks JavaScript syntax and Android manifest XML. A successful CI build proves compilation, not real-device behavior.
 
-## Important: Digital Asset Links
+The media notification still controls the WebView's HTML audio player rather than owning a separate native ExoPlayer pipeline. Confirm that WebView audio continues reliably when the screen is locked, the app is backgrounded, or Android reclaims the Activity. If the Activity/WebView is destroyed, notification controls may no longer reach the page.
 
-A fully verified TWA requires the signing certificate fingerprint in:
+Before calling this release-ready, test on physical Android devices:
+- Android 13–16 notification permission and notification-channel behavior
+- Quran audio while screen-locked, including play/pause/next/previous
+- Long recitations, seeking, interrupted networks, and offline playback after force-closing/reopening the app
+- Cache quota and retention after device storage pressure
+- Prayer times, test adhan, exact-alarm permission denied/granted, reboot, time/date changes, and app update
+- Adhan playback with screen off and with network unavailable
 
-`https://gpldroid.github.io/.well-known/assetlinks.json`
-
-The current website is a GitHub Pages project site at `/isslampro/`. A `.well-known/assetlinks.json` file placed inside this repository would be served below `/isslampro/`, which is not the required origin-root URL. The workflow therefore writes a copy to `download/assetlinks.json` after signing, so it can be published at the correct origin root if that host is configured.
-
-Until the origin-root Digital Asset Links file is published, Android may open the website in a Custom Tab fallback rather than a verified fullscreen TWA.
-
-## Build
-
-The workflow uses Java 17, Gradle 8.13, Android Gradle Plugin 8.13.2, and Android Browser Helper 2.7.4. Run it from GitHub Actions after adding the four secrets.
+Do not merge PR #8 into `main` until the latest CI run succeeds and the device test checklist is completed.

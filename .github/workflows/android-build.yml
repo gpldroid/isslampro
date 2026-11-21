@@ -1,21 +1,38 @@
-name: Android APK and AAB
+name: Android validation and release
 
 on:
   workflow_dispatch:
+    inputs:
+      signed_release:
+        description: "Build signed APK/AAB (requires all four Android signing secrets)"
+        required: true
+        type: boolean
+        default: false
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "android-twa/**"
+      - "app.js"
+      - "sw.js"
+      - ".github/workflows/android-build.yml"
   push:
     branches:
       - main
       - compat-galaxy-j7
+      - play-store-prep
     paths:
       - "android-twa/**"
+      - "app.js"
+      - "sw.js"
       - ".github/workflows/android-build.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
-    name: Build signed Android packages
+    name: Android build
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -26,6 +43,16 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+
+      - name: Validate JavaScript and Android manifest
+        run: |
+          node --check app.js
+          node --check sw.js
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          ET.parse("android-twa/app/src/main/AndroidManifest.xml")
+          print("AndroidManifest.xml is well-formed")
+          PY
 
       - name: Install Android SDK API 36 and accept licenses
         shell: bash
@@ -43,7 +70,7 @@ jobs:
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Generate density-specific APK launcher icons
+      - name: Generate density-specific launcher icons
         shell: bash
         run: |
           set -euo pipefail
@@ -52,26 +79,20 @@ jobs:
           from PIL import Image, ImageDraw
           from pathlib import Path
 
-          densities = {
-              "mdpi": 48,
-              "hdpi": 72,
-              "xhdpi": 96,
-              "xxhdpi": 144,
-              "xxxhdpi": 192,
-          }
+          densities = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
           root = Path("android-twa/app/src/main/res")
           for density, size in densities.items():
               (root / f"mipmap-{density}").mkdir(parents=True, exist_ok=True)
               scale = size / 108
+              p = lambda value: round(value * scale * 4)
               canvas = Image.new("RGBA", (size * 4, size * 4), (8, 36, 35, 255))
               draw = ImageDraw.Draw(canvas)
-              p = lambda value: round(value * scale * 4)
               gold = (201, 168, 106, 255)
               draw.line([(p(54),p(8)),(p(100),p(54)),(p(54),p(100)),(p(8),p(54)),(p(54),p(8))],
                         fill=gold, width=max(2,round(3*scale*4)), joint="curve")
               draw.rectangle((p(28),p(28),p(80),p(80)), outline=gold, width=max(2,round(2*scale*4)))
-              book = [(54,39),(44,32),(32,31),(25,33),(25,72),(36,70),(46,72),
-                      (54,80),(62,72),(72,70),(83,72),(83,33),(76,31),(64,32),(54,39)]
+              book = [(54,39),(44,32),(32,31),(25,33),(25,72),(36,70),(46,72),(54,80),
+                      (62,72),(72,70),(83,72),(83,33),(76,31),(64,32),(54,39)]
               draw.line([(p(x),p(y)) for x,y in book], fill=(201,168,106,180),
                         width=max(2,round(2*scale*4)), joint="curve")
               draw.line([(p(54),p(39)),(p(54),p(80))], fill=gold,
@@ -86,7 +107,22 @@ jobs:
         with:
           gradle-version: "8.13"
 
+      - name: Build unsigned validation packages
+        run: |
+          gradle --no-daemon -p android-twa clean :app:assembleDebug :app:bundleDebug
+
+      - name: Upload unsigned validation packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: islam-pro-android-validation
+          path: |
+            android-twa/app/build/outputs/apk/debug/app-debug.apk
+            android-twa/app/build/outputs/bundle/debug/app-debug.aab
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Validate signing secrets
+        if: ${{ inputs.signed_release == true }}
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -105,74 +141,68 @@ jobs:
           fi
 
       - name: Prepare signing keystore
+        if: ${{ inputs.signed_release == true }}
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          set -euo pipefail
           mkdir -p "$RUNNER_TEMP/android-signing"
           printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/android-signing/upload-key.jks"
           test -s "$RUNNER_TEMP/android-signing/upload-key.jks"
           chmod 600 "$RUNNER_TEMP/android-signing/upload-key.jks"
 
-      - name: Build signed APK and AAB
+      - name: Build signed release APK and AAB
+        if: ${{ inputs.signed_release == true }}
         env:
           ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/android-signing/upload-key.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          gradle --no-daemon -p android-twa clean :app:assembleRelease :app:bundleRelease
+          gradle --no-daemon -p android-twa :app:assembleRelease :app:bundleRelease
 
-      - name: Prepare release files and Digital Asset Links statement
+      - name: Prepare release files and signing fingerprint
+        if: ${{ inputs.signed_release == true }}
         shell: bash
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          mkdir -p download
-          cp android-twa/app/build/outputs/apk/release/app-release.apk download/app-release.apk
-          cp android-twa/app/build/outputs/bundle/release/app-release.aab download/app-release.aab
-
+          mkdir -p release-output
+          cp android-twa/app/build/outputs/apk/release/app-release.apk release-output/app-release.apk
+          cp android-twa/app/build/outputs/bundle/release/app-release.aab release-output/app-release.aab
           fingerprint="$(keytool -list -v \
             -keystore "$RUNNER_TEMP/android-signing/upload-key.jks" \
             -alias "$KEY_ALIAS" \
             -storepass "$KEYSTORE_PASSWORD" \
             | sed -n 's/^[[:space:]]*SHA256: //p' | head -n 1 | tr -d '[:space:]')"
+          test -n "$fingerprint"
+          printf '%s\n' "$fingerprint" > release-output/upload-key-sha256.txt
+          (cd release-output && sha256sum app-release.apk app-release.aab > SHA256SUMS.txt)
 
-          if [[ -z "$fingerprint" ]]; then
-            echo "Could not read the SHA-256 signing certificate fingerprint."
-            exit 1
-          fi
-
-          cat > download/assetlinks.json <<EOF
-          [
-            {
-              "relation": ["delegate_permission/common.handle_all_urls"],
-              "target": {
-                "namespace": "android_app",
-                "package_name": "com.gpldroid.isslampro",
-                "sha256_cert_fingerprints": ["$fingerprint"]
-              }
-            }
-          ]
-          EOF
-
-          echo "APK and AAB prepared. Signing certificate fingerprint: $fingerprint"
-
-      - name: Upload build outputs
+      - name: Upload signed release artifacts
+        if: ${{ inputs.signed_release == true }}
         uses: actions/upload-artifact@v4
         with:
           name: islam-pro-android-release
-          path: |
-            download/app-release.apk
-            download/app-release.aab
-            download/assetlinks.json
+          path: release-output/*
           if-no-files-found: error
           retention-days: 30
 
-      - name: Commit release files into download/
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Add signed Android APK and AAB release files"
-          file_pattern: "download/*.apk download/*.aab download/assetlinks.json"
+      - name: Publish build summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## IsslamPro Android build"
+            echo "- Application ID: com.gpldroid.isslampro"
+            echo "- Version: 1.0.4 (5)"
+            echo "- Target SDK: 36"
+            if [[ "${{ inputs.signed_release }}" == "true" ]]; then
+              echo "- Signed release requested; check the release artifact above."
+            else
+              echo "- Unsigned validation build only; no Play-uploadable release was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

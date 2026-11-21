@@ -22,7 +22,7 @@ function nativePlayback(t, playing) {
   const sig = t ? `${t.u}|${playing}` : "none";
   if (sig === nativeSig) return;
   nativeSig = sig;
-  try { t ? NATIVE.playbackState(t.t || "", t.s || "", !!playing, true) : NATIVE.playbackState("", "", false, false); } catch {}
+  try { t ? NATIVE.playbackState(t.t || "", t.s || "", !!playing, true, t.u || "") : NATIVE.playbackState("", "", false, false, ""); } catch {}
 }
 window.__nativeCmd = (c) => {
   if (c === "toggle") toggle(); else if (c === "next") next(); else if (c === "prev") prev(); else if (c === "stop") closePlayer();
@@ -128,8 +128,10 @@ async function loadCur(autoplay) {
   // drop the tap that allows playback to start.
   if (S.saved[t.u] && "caches" in window) {
     try {
-      const hit = await (await caches.open("uq-audio")).match(t.u);
-      if (hit) { P.obj = URL.createObjectURL(await hit.blob()); src = P.obj; }
+      const hit = await (await caches.open("uq-audio")).match(t.u, { ignoreVary: true });
+      // Keep the original media URL; the service worker serves cached byte ranges
+      // without copying a long recitation into one page-level Blob.
+      if (!hit) { delete S.saved[t.u]; save(true); }
     } catch {}
   }
   A.preload = "metadata";
@@ -396,24 +398,29 @@ async function saveOffline(t) {
     delete S.saved[t.u]; save(true); toast("تم حذف المقطع من الحفظ بدون نت"); return;
   }
   if (!("caches" in window)) { toast("المتصفح ده مبيدعمش الحفظ بدون نت"); return; }
+  let audioCache = null;
   try {
-    if (navigator.storage?.persist) navigator.storage.persist();
+    let persistentStorage = false;
+    try { if (navigator.storage?.persist) persistentStorage = await navigator.storage.persist(); } catch {}
     toast("جاري حفظ المقطع…", 60000);
     const r = await fetch(t.u, { mode: "cors" });
     if (!r.ok) throw new Error(r.status);
     const total = +r.headers.get("content-length") || 0;
-    const reader = r.body.getReader(); const parts = []; let got = 0, lastShow = 0;
+    audioCache = await caches.open("uq-audio");
+    const cacheWrite = audioCache.put(t.u, r.clone());
+    const reader = r.body.getReader(); let got = 0, lastShow = 0;
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      parts.push(value); got += value.length;
+      got += value.length;
       if (total && Date.now() - lastShow > 500) { lastShow = Date.now(); toast(`جاري الحفظ ${n2a(Math.round((got / total) * 100))}٪`, 60000); }
     }
-    const blob = new Blob(parts, { type: r.headers.get("content-type") || "audio/mpeg" });
-    await (await caches.open("uq-audio")).put(t.u, new Response(blob, { headers: { "Content-Type": blob.type, "Content-Length": String(blob.size) } }));
-    S.saved[t.u] = { ...t, size: blob.size, at: Date.now() }; save(true);
+    const size = got;
+    await cacheWrite;
+    S.saved[t.u] = { ...t, size, at: Date.now(), persistentStorage }; save(true);
     toast("اتحفظ ✓ تقدر تسمعه من غير نت من «محفوظاتي»");
   } catch {
+    if (audioCache) { try { await audioCache.delete(t.u); } catch {} }
     toast("الحفظ مكملش، اتأكد من النت وجرّب تاني");
   }
   if ($("#sheet").classList.contains("open")) renderSheet(true);
@@ -2278,8 +2285,9 @@ async function prayer(parts) {
     <div class="btn-row"><button class="btn ghost" data-act="testAdhan">${ic("play")}جرّب الأذان</button></div>
 
     <div class="sec-h"><h2>التنبيهات</h2></div>
-    ${NATIVE ? `<div class="setting app-ok"><span class="grow"><b>${c.auto ? "أكّد مدينتك عشان الأذان يشتغل" : "الأذان شغال حتى والتطبيق مقفول ✓"}</b><small>التطبيق بيشغّل الأذان بصوت الشيخ في ميعاده والشاشة مقفولة، وبيحفظ صوت الأذان على الموبايل عشان يشتغل من غير نت</small></span></div>
+    ${NATIVE ? `<div class="setting app-ok"><span class="grow"><b>${c.auto ? "أكّد مدينتك عشان الأذان يشتغل" : "الأذان شغال حتى والتطبيق مقفول ✓"}</b><small>تُجدول تنبيهات الصلاة محلياً على الجهاز. دقة التوقيت تعتمد على سماح المنبهات الدقيقة وإعدادات النظام، وقد يحتاج تشغيل صوت الأذان إلى اتصال بالإنترنت.</small></span></div>
       ${(() => { try { return NATIVE.batteryFree() ? "" : `<div class="setting"><span class="grow"><b>اسمح للتطبيق يشتغل في الخلفية</b><small>بعض الموبايلات بتقفل التطبيقات لتوفير البطارية، وده ممكن يأخر الأذان</small></span><button class="btn" style="height:38px;padding:0 14px" data-act="battery">السماح</button></div>`; } catch { return ""; } })()}
+      <div class="setting"><span class="grow"><b>دقة تنبيهات الصلاة</b><small>اسمح بالمنبهات الدقيقة ليصل التنبيه في وقت الصلاة المحدد، إذا كان الخيار متاحاً على جهازك.</small></span><button class="btn ghost" style="height:38px;padding:0 14px" data-act="exactAlarm">ضبط</button></div>
       <div class="setting"><span class="grow"><b>إشعارات التطبيق</b><small>لو الإشعارات مقفولة، الأذان مش هيبان على الشاشة</small></span><button class="btn ghost" style="height:38px;padding:0 14px" data-act="appNotify">الإعدادات</button></div>
       <div style="display:none">` : ""}
     <div class="setting"><span class="grow"><b>إشعار وقت الصلاة</b><small>إشعار على الموبايل مع الأذان</small></span>
@@ -2753,6 +2761,7 @@ document.addEventListener("click", async (e) => {
     }
     case "battery": if (NATIVE) NATIVE.openBatterySettings(); break;
     case "appNotify": if (NATIVE) NATIVE.openNotificationSettings(); break;
+     case "exactAlarm": if (NATIVE) NATIVE.openExactAlarmSettings(); break;
     case "gps": locateMe(); break;
     case "confirmCity": { const c = prayerCfg(); c.auto = false; save(true); toast(`تم ✓ الأذان هيشتغل على مواقيت ${c.name}`); route(); break; }
     case "ics": buildICS(); break;
