@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - compat-galaxy-j7
     paths:
       - "android-twa/**"
       - ".github/workflows/android-build.yml"
