@@ -1,6 +1,5 @@
-/* Ultra Quran service worker: app shell offline, data refreshed in the background,
-   Mushaf pages and fonts cached after first view. Audio is not intercepted
-   (offline audio is read from the "uq-audio" cache by the page itself). */
+/* IsslamPro service worker: app shell offline, data refreshed in the background,
+   Mushaf pages/fonts cached after first view, and saved audio served from Cache Storage. */
 const VERSION = "uq-shell-59";
 const SHELL = [
   "./", "index.html", "style.css?v=56", "app.js?v=57", "prayer-calc.js?v=56", "style.css", "app.js", "manifest.webmanifest",
@@ -90,7 +89,7 @@ self.addEventListener("fetch", (e) => {
   if (req.headers.has("range")) {
     return e.respondWith((async () => {
       const audio = await caches.open("uq-audio");
-      const hit = await audio.match(new Request(req.url, { method: "GET" }));
+      const hit = await audio.match(req.url, { ignoreVary: true });
       return hit ? audioRangeFromCache(req, hit) : fetch(req);
     })());
   }
