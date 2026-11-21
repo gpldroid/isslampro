@@ -87,7 +87,7 @@ public class MainActivity extends Activity {
                 + "schedulePrayers:(...a)=>send('schedulePrayers',a),clearPrayers:()=>send('clearPrayers'),"
                 + "testAdhan:(...a)=>send('testAdhan',a),batteryFree:()=>false,"
                 + "openBatterySettings:()=>send('openBatterySettings'),"
-                + "openNotificationSettings:()=>send('openNotificationSettings')};})();";
+                + "openNotificationSettings:()=>send('openNotificationSettings'),openExactAlarmSettings:()=>send('openExactAlarmSettings')};})();";
             WebViewCompat.addDocumentStartJavaScript(webView, bridgeScript,
                 Collections.singleton("https://gpldroid.github.io"));
         }
