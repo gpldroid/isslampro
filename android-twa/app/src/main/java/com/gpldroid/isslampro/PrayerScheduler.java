@@ -1,0 +1,89 @@
+package com.gpldroid.isslampro;
+
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+final class PrayerScheduler {
+    private static final String PREFS = "isslampro_prayer_schedule";
+    private static final String KEY = "schedule_json";
+
+    static void schedule(Context context, String json) {
+        try {
+            JSONObject root = new JSONObject(json);
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, json).apply();
+            cancelAlarms(context, root.optJSONArray("items"));
+            JSONArray items = root.optJSONArray("items");
+            if (items == null) return;
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.optJSONObject(i);
+                if (item == null) continue;
+                long at = item.optLong("t", 0L);
+                if (at <= System.currentTimeMillis()) continue;
+                Intent intent = new Intent(context, PrayerAlarmReceiver.class)
+                    .putExtra("title", "أذان " + item.optString("name", item.optString("k", "الصلاة")))
+                    .putExtra("url", item.optString("url", ""))
+                    .putExtra("city", root.optString("city", ""));
+                PendingIntent pi = PendingIntent.getBroadcast(context, requestCode(at, item.optString("k")),
+                    intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+                if (Build.VERSION.SDK_INT >= 31 && alarms.canScheduleExactAlarms()) {
+                    alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+                } else {
+                    alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+                }
+            }
+        } catch (Exception ignored) { }
+    }
+
+    static void test(Context context, String title, String url, int delaySeconds) {
+        long at = System.currentTimeMillis() + Math.max(1, delaySeconds) * 1000L;
+        Intent intent = new Intent(context, PrayerAlarmReceiver.class)
+            .putExtra("title", title).putExtra("url", url).putExtra("test", true);
+        PendingIntent pi = PendingIntent.getBroadcast(context, 783410,
+            intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        if (Build.VERSION.SDK_INT >= 31 && alarms.canScheduleExactAlarms()) {
+            alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+        } else {
+            alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pi);
+        }
+    }
+
+    static void clear(Context context) {
+        String json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null);
+        if (json != null) {
+            try { cancelAlarms(context, new JSONObject(json).optJSONArray("items")); }
+            catch (Exception ignored) { }
+        }
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply();
+    }
+
+    static void restore(Context context) {
+        String json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null);
+        if (json != null) schedule(context, json);
+    }
+
+    private static void cancelAlarms(Context context, JSONArray items) {
+        if (items == null) return;
+        AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        for (int i = 0; i < items.length(); i++) {
+            JSONObject item = items.optJSONObject(i);
+            if (item == null) continue;
+            long at = item.optLong("t", 0L);
+            Intent intent = new Intent(context, PrayerAlarmReceiver.class);
+            PendingIntent pi = PendingIntent.getBroadcast(context, requestCode(at, item.optString("k")),
+                intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+            alarms.cancel(pi);
+            pi.cancel();
+        }
+    }
+
+    private static int requestCode(long at, String prayer) {
+        return (int) (at / 60000L) * 31 + prayer.hashCode();
+    }
+}
