@@ -34,6 +34,16 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Validate JavaScript and Android manifest
+        run: |
+          node --check app.js
+          node --check sw.js
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          ET.parse("android-twa/app/src/main/AndroidManifest.xml")
+          print("AndroidManifest.xml is well-formed")
+          PY
+
       - name: Install Android SDK API 36 and accept licenses
         shell: bash
         run: |
