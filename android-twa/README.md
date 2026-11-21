@@ -1,36 +1,43 @@
 # IsslamPro Android
 
-Android wrapper for the IsslamPro website:
+Android application shell for the IsslamPro Quran and prayer app:
 
 `https://gpldroid.github.io/isslampro/`
 
-The code under this directory is a **native Android WebView host**, not a Trusted Web Activity (TWA). It currently provides the Android application shell and website integration; native media-session controls and richer offline behavior remain future work.
+This project uses a native Android WebView host (not a Trusted Web Activity). The goal of this branch is to improve Quran audio playback, offline listening, prayer scheduling, and adhan playback. No app-store submission is part of this work.
 
 ## Build configuration
 
 - Application ID: `com.gpldroid.isslampro`
-- Version: `1.0.3 (versionCode 4)`
+- Version: `1.0.4 (versionCode 5)`
 - Minimum Android: API 21 (Android 5.0)
 - Compile SDK / Target SDK: 36
 - Java: 17
 - Gradle: 8.13
 - Android Gradle Plugin: 8.13.2
 
-## Build and release
+## Current implementation
 
-See [PLAY_STORE_RELEASE.md](PLAY_STORE_RELEASE.md) for keystore setup, GitHub Actions secrets, release build steps, and the Google Play readiness checklist.
+- The WebView bridge is restricted to the trusted `https://gpldroid.github.io` origin and main-frame messages.
+- Quran audio uses the website player and a native Android media-session notification. Notification controls send play/pause/next/previous commands to the page.
+- Saved Quran audio is stored in the WebView Cache Storage library. The service worker now serves cached byte-range requests as streams, avoiding creation of a full in-memory Blob for long recordings.
+- Cache Storage persistence is requested when supported. Actual quota, eviction behavior, and offline playback still need testing on physical devices and with the audio providers used by the app.
+- Prayer alarms are stored locally and replaced cleanly when a new schedule arrives. Alarms are restored after reboot, app replacement, device date/time changes, and exact-alarm permission changes.
+- Exact alarms are used only when Android grants exact-alarm access; otherwise the app falls back to inexact idle-allowed alarms.
+- The adhan service starts as a media-playback foreground service and streams the selected adhan URL when its alarm fires. Offline adhan pre-download is not implemented; internet is required for a streamed adhan.
 
-The workflow first runs an unsigned validation build on pushes. A signed APK and AAB are produced only when manually dispatching the workflow with `signed_release=true` and after all four signing secrets are configured.
+## Validation status and known limits
 
-The workflow does not commit APKs, AABs, keystores, or passwords into the repository. Signed packages are delivered as GitHub Actions artifacts.
+The GitHub Actions workflow builds an unsigned debug APK/AAB for validation and checks JavaScript syntax and Android manifest XML. A successful CI build proves compilation, not real-device behavior.
 
+The media notification still controls the WebView's HTML audio player rather than owning a separate native ExoPlayer pipeline. Confirm that WebView audio continues reliably when the screen is locked, the app is backgrounded, or Android reclaims the Activity. If the Activity/WebView is destroyed, notification controls may no longer reach the page.
 
-## Native Android integrations (under active validation)
+Before calling this release-ready, test on physical Android devices:
+- Android 13–16 notification permission and notification-channel behavior
+- Quran audio while screen-locked, including play/pause/next/previous
+- Long recitations, seeking, interrupted networks, and offline playback after force-closing/reopening the app
+- Cache quota and retention after device storage pressure
+- Prayer times, test adhan, exact-alarm permission denied/granted, reboot, time/date changes, and app update
+- Adhan playback with screen off and with network unavailable
 
-The Android host now includes an origin-restricted WebView message bridge (only the main frame at `https://gpldroid.github.io` is accepted), a media-session notification bridge, and an AlarmManager-based prayer scheduler. Prayer schedules are stored locally and restored after reboot or app update. Exact alarms are used only when Android grants exact-alarm access; otherwise the scheduler falls back to inexact idle-allowed alarms.
-
-Quran audio downloads continue to use the website's Cache Storage offline library. This is persistent WebView-origin storage rather than a separately managed native file library, and the browser may still evict it under storage pressure. Validate long downloads, offline playback, and cache retention on target devices.
-
-The adhan service streams the selected adhan URL when its scheduled alarm fires. It currently requires network access for that audio; pre-downloading adhan audio for fully offline prayer playback is not yet implemented.
-
-These integrations are implementation-stage code, not a production certification. Confirm the Android build, test notification permissions and exact-alarm access on Android 13–16, and test lock-screen media controls, device reboot, time-zone changes, and adhan playback on physical devices before Play submission.
+Do not merge PR #8 into `main` until the latest CI run succeeds and the device test checklist is completed.
