@@ -144,6 +144,13 @@ public class MainActivity extends Activity {
                 super.onReceivedError(view, request, error);
             }
 
+            @SuppressWarnings("deprecation")
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                if (failingUrl != null && failingUrl.equals(view.getUrl())) showOfflinePanel();
+                super.onReceivedError(view, errorCode, description, failingUrl);
+            }
+
             @Override
             public void onReceivedHttpError(WebView view, WebResourceRequest request, android.webkit.WebResourceResponse response) {
                 if (request.isForMainFrame() && response.getStatusCode() >= 500) showOfflinePanel();
