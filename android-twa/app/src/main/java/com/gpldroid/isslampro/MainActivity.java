@@ -23,7 +23,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Button;
 import android.view.Gravity;
-import android.view.ViewGroup;
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import androidx.webkit.WebViewCompat;
