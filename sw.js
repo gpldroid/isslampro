@@ -1,8 +1,8 @@
 /* IsslamPro service worker: app shell offline, data refreshed in the background,
    Mushaf pages/fonts cached after first view, and saved audio served from Cache Storage. */
-const VERSION = "uq-shell-59";
+const VERSION = "uq-shell-60";
 const SHELL = [
-  "./", "index.html", "style.css?v=56", "app.js?v=57", "prayer-calc.js?v=56", "style.css", "app.js", "manifest.webmanifest",
+  "./", "index.html", "style.css?v=56", "app.js?v=57", "prayer-calc.js?v=56", "floating-controls.css?v=1", "floating-controls.js?v=1", "style.css", "app.js", "manifest.webmanifest",
   "img/lattice.svg", "img/bg.webp", "img/bg-m.webp", "fonts/Cairo-SemiBold.ttf", "img/star.svg", "icons/icon-192.png?v=2", "icons/icon-512.png?v=2",
   "prayer-calc.js", "data/meta.json", "data/reciters.json", "data/radios.json", "data/adhan.json",
 ];

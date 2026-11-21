@@ -1,0 +1,173 @@
+/* Floating navigation and appearance controls — isolated add-on. */
+#uq-floating-controls {
+  position: fixed;
+  z-index: 90;
+  inset-inline-start: 14px;
+  bottom: calc(var(--tabbar, 64px) + var(--mini, 0px) + env(safe-area-inset-bottom) + 18px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  direction: ltr;
+}
+#uq-floating-controls .uq-float-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border: 1px solid #d9b36c88;
+  border-radius: 50%;
+  color: #f8e6bd;
+  background: linear-gradient(145deg, #1a5a51, #082423 78%);
+  box-shadow: 0 5px 18px #0005, 0 0 0 4px #d9b36c12, inset 0 1px 0 #ffffff2b;
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#uq-floating-controls .uq-float-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px #0006, 0 0 0 5px #d9b36c20, 0 0 18px #d9b36c35;
+}
+#uq-floating-controls .uq-float-btn:active { transform: scale(.94); }
+#uq-floating-controls .uq-float-btn:focus-visible {
+  outline: 3px solid #f0cf86;
+  outline-offset: 4px;
+}
+#uq-floating-controls .uq-float-btn svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+#uq-floating-controls .uq-theme svg { width: 20px; height: 20px; }
+#uq-floating-controls .uq-float-btn[hidden] { display: none; }
+@media (min-width: 1024px) {
+  #uq-floating-controls {
+    inset-inline-start: 24px;
+    bottom: calc(env(safe-area-inset-bottom) + 24px);
+    gap: 12px;
+  }
+  #uq-floating-controls .uq-float-btn { width: 50px; height: 50px; }
+}
+@media (max-width: 380px) {
+  #uq-floating-controls { inset-inline-start: 9px; gap: 8px; }
+  #uq-floating-controls .uq-float-btn { width: 42px; height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #uq-floating-controls .uq-float-btn { transition: none; }
+}
+
+/* Light appearance: preserve the existing layout and Quran page colors. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --night: #f4f7f4;
+  --deep: #e8efe9;
+  --emerald: #e1ece5;
+  --jade: #cfe2d6;
+  --gold: #98702e;
+  --gold-soft: #b8955220;
+  --parchment: #263b32;
+  --mist: #65786e;
+  --paper: #fffdf5;
+  --line: #9b7b3d40;
+}
+:root[data-theme="light"] html,
+:root[data-theme="light"] body,
+html:has(:root[data-theme="light"]) { background: #f3f6f2; }
+:root[data-theme="light"] body {
+  background: #f3f6f2 !important;
+  color: #263b32;
+}
+:root[data-theme="light"] .top {
+  background: #f8faf7ed;
+  border-bottom-color: #234b3b18;
+  box-shadow: 0 4px 18px #183b2b0b;
+}
+:root[data-theme="light"] .hero {
+  background: radial-gradient(120% 90% at 50% 0%, #d9eadf 0%, #edf4ee 58%, transparent 100%);
+}
+:root[data-theme="light"] .hero blockquote { color: #29483a; }
+:root[data-theme="light"] .resume,
+:root[data-theme="light"] .bio,
+:root[data-theme="light"] .note,
+:root[data-theme="light"] .search,
+:root[data-theme="light"] .navbtn,
+:root[data-theme="light"] .quiz .opt {
+  background-color: #e5eee7;
+  border-color: #315c471c;
+  color: #263b32;
+}
+:root[data-theme="light"] .tile:not(.dawla) {
+  background: linear-gradient(155deg, #ffffff, #e8f0e9);
+  border-color: #315c4720;
+  box-shadow: 0 5px 16px #244b3510;
+  color: #263b32;
+}
+:root[data-theme="light"] .tile.wide:not(.dawla) {
+  background: linear-gradient(120deg, #d9eadf, #edf4ee 78%);
+}
+:root[data-theme="light"] .tabs {
+  background: #f8faf7f5;
+  border-color: #315c4720;
+  box-shadow: 0 -5px 22px #244b3512;
+  color: #304b3d;
+}
+:root[data-theme="light"] .tabs a { color: #526b5d; }
+:root[data-theme="light"] .tabs a.active,
+:root[data-theme="light"] .tabs a[aria-current="page"] { color: #8b672b; }
+:root[data-theme="light"] .mini,
+:root[data-theme="light"] .sheet {
+  background: #f8faf7;
+  color: #263b32;
+  border-color: #9b7b3d55;
+}
+:root[data-theme="light"] .mini .t,
+:root[data-theme="light"] .sheet { color: #263b32; }
+:root[data-theme="light"] .row { border-bottom-color: #315c471c; }
+:root[data-theme="light"] .row:active { background: #315c470b; }
+:root[data-theme="light"] .chip { border-color: #315c4728; color: #526b5d; }
+:root[data-theme="light"] .chip[aria-pressed="true"] { color: #fffdf5; }
+:root[data-theme="light"] .profile h2,
+:root[data-theme="light"] .sec-h h2,
+:root[data-theme="light"] .empty b,
+:root[data-theme="light"] .wgroup,
+:root[data-theme="light"] .person b,
+:root[data-theme="light"] .row .t,
+:root[data-theme="light"] .ep-txt b,
+:root[data-theme="light"] .wf-who b { color: #263b32; }
+:root[data-theme="light"] .toast {
+  background: #263b32;
+  color: #fffdf5;
+}
+:root[data-theme="light"] input,
+:root[data-theme="light"] textarea,
+:root[data-theme="light"] select { color: #263b32; }
+:root[data-theme="light"] .reader,
+:root[data-theme="light"] .page-wrap,
+:root[data-theme="light"] .leaf-in.qpc {
+  background: #fffdf5;
+}
+:root[data-theme="light"] .tasbih .bead {
+  background: radial-gradient(circle at 40% 30%, #70ad91, #28624c 72%);
+  color: #fffdf5;
+}
+:root[data-theme="light"] .dhero,
+:root[data-theme="light"] .tile.dawla,
+:root[data-theme="light"] .wfeature,
+:root[data-theme="light"] .ytfolder { color: #f8f5e9; }
+:root[data-theme="light"] .dhero .dh-t,
+:root[data-theme="light"] .wf-in b,
+:root[data-theme="light"] .dhero .dh-s,
+:root[data-theme="light"] .ytf-t b { color: #f8e6bd; }
+:root[data-theme="light"] .video { background: #132b25; }
+:root[data-theme="light"] .vbar { color: #f8f5e9; }
+:root[data-theme="light"] #uq-floating-controls .uq-float-btn {
+  color: #fff8e7;
+  background: linear-gradient(145deg, #39765b, #214c3a 78%);
+  border-color: #a9823f99;
+  box-shadow: 0 5px 18px #183b2b30, 0 0 0 4px #a9823f18, inset 0 1px 0 #ffffff45;
+}
