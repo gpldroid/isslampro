@@ -218,6 +218,7 @@ html[data-theme="light"],
     0 0 16px #d9b36c35;
   filter: drop-shadow(0 2px 2px #0007);
   letter-spacing: .15px;
+  word-spacing: 3px;
   transition: transform .35s ease, filter .35s ease;
 }
 .top .brand:hover h1 {
